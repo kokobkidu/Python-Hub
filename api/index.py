@@ -5,7 +5,6 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
-    # የኳስ መረጃውን የሚያመጣው API
     url = "https://v3.football.api-sports.io/fixtures?league=39&season=2023&last=5"
     headers = {
         'x-rapidapi-host': 'v3.football.api-sports.io',
@@ -13,6 +12,7 @@ def home():
     }
     try:
         response = requests.get(url, headers=headers)
+        # ኮዱ እዚህ ጋር ነው የሚስተካከለው
         return jsonify(response.json())
     except Exception as e:
         return jsonify({"error": str(e)})
