@@ -8,7 +8,7 @@ def home():
     url = "https://v3.football.api-sports.io/fixtures?league=39&season=2023&last=5"
     headers = {
         'x-rapidapi-host': 'v3.football.api-sports.io',
-        'x-rapidapi-key': 'e9a95b77eba7237f2a107a30efca4dbb'
+        'x-rapidapi-key': e9a95b775eba7237f2a107a30bad87f9
     }
     try:
         response = requests.get(url, headers=headers)
