@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, render_template_string
 import requests
 
 app = Flask(__name__)
@@ -13,9 +13,61 @@ def home():
     
     try:
         response = requests.get(url, headers=headers)
-        # አጠቃላይ መረጃውን እንደ ጽሁፍ እናሳይህ
-        return f"የተመለሰው መረጃ: {response.text[:500]}"
+        data = response.json()
+        matches = data.get('response', [])
         
+        # ውብ የሆነ የ HTML ዲዛይን (እንደ Besoccer አይነት ካርዶች)
+        html_content = """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Livescore - Football Matches</title>
+            <style>
+                body { font-family: Arial, sans-serif; background-color: #f0f2f5; margin: 0; padding: 10px; }
+                .header { background-color: #2e7d32; color: white; padding: 15px; text-align: center; font-size: 20px; font-weight: bold; border-radius: 8px; margin-bottom: 15px; }
+                .match-card { background: white; margin-bottom: 10px; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
+                .team { width: 40%; text-align: center; font-weight: bold; font-size: 14px; }
+                .score-box { width: 20%; text-align: center; background: #e8f5e9; padding: 8px; border-radius: 5px; font-weight: bold; font-size: 16px; color: #2e7d32; }
+                .match-status { font-size: 11px; color: #666; margin-top: 4px; }
+            </style>
+        </head>
+        <body>
+            <div class="header">⚽ Premier League Matches</div>
+        """
+        
+        if matches:
+            for match in matches:
+                home_team = match['teams']['home']['name']
+                away_team = match['teams']['away']['name']
+                home_goals = match['goals']['home']
+                away_goals = match['goals']['away']
+                status = match['fixture']['status']['long']
+                
+                # ውጤቱ ካልታወቀ (ገና ያልጀመረ ከሆነ) 0 ፋንታ "-" እናሳያለን
+                h_score = home_goals if home_goals is not None else "-"
+                a_score = away_goals if away_goals is not None else "-"
+                
+                html_content += f"""
+                <div class="match-card">
+                    <div class="team">{home_team}</div>
+                    <div class="score-box">
+                        {h_score} - {a_score}
+                        <div class="match-status">{status}</div>
+                    </div>
+                    <div class="team">{away_team}</div>
+                </div>
+                """
+        else:
+            html_content += "<p style='text-align:center;'>ምንም ግጥሚያ አልተገኘም</p>"
+            
+        html_content += """
+        </body>
+        </html>
+        """
+        return html_content
+
     except Exception as e:
         return f"ስህተት ተፈጥሯል: {str(e)}"
 
