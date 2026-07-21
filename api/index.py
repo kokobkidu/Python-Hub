@@ -16,7 +16,6 @@ def home():
         data = response.json()
         matches = data.get('response', [])
         
-        # ውብ የሆነ የ HTML ዲዛይን (እንደ Besoccer አይነት ካርዶች)
         html_content = """
         <!DOCTYPE html>
         <html>
@@ -41,11 +40,13 @@ def home():
             for match in matches:
                 home_team = match['teams']['home']['name']
                 away_team = match['teams']['away']['name']
-                home_goals = match['goals']['home']
-                away_goals = match['goals']['away']
+                
+                goals = match.get('goals', {})
+                home_goals = goals.get('home')
+                away_goals = goals.get('away')
+                
                 status = match['fixture']['status']['long']
                 
-                # ውጤቱ ካልታወቀ (ገና ያልጀመረ ከሆነ) 0 ፋንታ "-" እናሳያለን
                 h_score = home_goals if home_goals is not None else "-"
                 a_score = away_goals if away_goals is not None else "-"
                 
