@@ -5,7 +5,8 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
-    url = "https://v3.football.api-sports.io/fixtures?league=39&season=2023"
+    # ሲዝኑን ወደ 2024 ቀይረነዋል (ነፃው አካውንት እንዲያነበው)
+    url = "https://v3.football.api-sports.io/fixtures?league=39&season=2024"
     headers = {
         'x-rapidapi-host': 'v3.football.api-sports.io',
         'x-rapidapi-key': '2569736eeedf66e94d33e0afffa3694a'
@@ -33,7 +34,7 @@ def home():
             </style>
         </head>
         <body>
-            <div class="header">⚽ Premier League Matches</div>
+            <div class="header">⚽ Premier League Matches (2024)</div>
         """
         
         if matches:
@@ -61,7 +62,7 @@ def home():
                 </div>
                 """
         else:
-            html_content += "<p style='text-align:center;'>ምንም ግጥሚያ አልተገኘም</p>"
+            html_content += "<p style='text-align:center;'>ለዚህ አመት የተገኘ ግጥሚያ የለም ወይም ፕላኑ ይገድበዋል</p>"
             
         html_content += """
         </body>
