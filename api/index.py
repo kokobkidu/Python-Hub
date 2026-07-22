@@ -53,6 +53,12 @@ def home():
                     elif status_type == 'STATUS_FINAL':
                         status_detail = "FT"
                     
+                    # ተጨማሪ መረጃዎችን (Summary / Details) ከኤፒአዩ ማውጣት
+                    details_text = "Match summary data is currently updating from the server."
+                    match_details = comp.get('details', [])
+                    if match_details:
+                        details_text = "<br>".join([d.get('description', '') for d in match_details if d.get('description')])
+                    
                     matches.append({
                         "id": m_id,
                         "league": comp_name,
@@ -60,7 +66,8 @@ def home():
                         "away": away_team,
                         "h": h_score,
                         "a": a_score,
-                        "status": status_detail
+                        "status": status_detail,
+                        "details": details_text
                     })
     except Exception as e:
         print("API Error:", e)
@@ -80,6 +87,7 @@ def home():
                     .back-btn { display: inline-block; margin: 15px; color: #1b5e20; text-decoration: none; font-weight: bold; }
                     .container { padding: 15px; max-width: 600px; margin: auto; background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
                     .score-header { text-align: center; font-size: 20px; font-weight: bold; color: #1b5e20; margin: 20px 0; background: #e8f5e9; padding: 15px; border-radius: 6px; }
+                    .match-events { margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 6px; font-size: 14px; color: #333; line-height: 1.6; }
                 </style>
             </head>
             <body>
@@ -91,7 +99,10 @@ def home():
                         {{ match.home }} {{ match.h }} - {{ match.a }} {{ match.away }}
                         <div style="font-size: 12px; color: #d32f2f; margin-top: 5px;">Status: {{ match.status }}</div>
                     </div>
-                    <p style="text-align: center; color: #666;">More details for this match will be added soon.</p>
+                    <div class="match-events">
+                        <strong>Match Events / Timeline:</strong><br>
+                        {{ match.details | safe }}
+                    </div>
                 </div>
             </body>
             </html>
