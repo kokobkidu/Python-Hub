@@ -50,6 +50,8 @@ def home():
                         if match_date_str:
                             dt_obj = datetime.strptime(match_date_str, "%Y-%m-%dT%H:%MZ")
                             status_detail = dt_obj.strftime('%H:%M')
+                    elif status_type == 'STATUS_FINAL':
+                        status_detail = "FT"
                     
                     matches.append({
                         "id": m_id,
@@ -63,7 +65,6 @@ def home():
     except Exception as e:
         print("API Error:", e)
 
-    # ሳጥኑ ሲነካ የሚከፈተው የዲቴል ገጽ
     if match_id:
         selected_match = next((m for m in matches if m['id'] == match_id), None)
         if selected_match:
@@ -83,14 +84,14 @@ def home():
             </head>
             <body>
                 <div class="top-bar">⚽ Koki Score - Detail</div>
-                <div style="max-width: 600px; margin: auto;"><a href="/?date={{ date }}" class="back-btn">⬅ ተመለስ</a></div>
+                <div style="max-width: 600px; margin: auto;"><a href="/?date={{ date }}" class="back-btn">⬅ Back</a></div>
                 <div class="container">
                     <h3>{{ match.league }}</h3>
                     <div class="score-header">
                         {{ match.home }} {{ match.h }} - {{ match.a }} {{ match.away }}
-                        <div style="font-size: 12px; color: #d32f2f; margin-top: 5px;">ሁኔታ: {{ match.status }}</div>
+                        <div style="font-size: 12px; color: #d32f2f; margin-top: 5px;">Status: {{ match.status }}</div>
                     </div>
-                    <p style="text-align: center; color: #666;">የዚህ ግጥሚያ ተጨማሪ ዝርዝሮች በሂደት ይጨመራሉ።</p>
+                    <p style="text-align: center; color: #666;">More details for this match will be added soon.</p>
                 </div>
             </body>
             </html>
@@ -153,7 +154,7 @@ def home():
             </div>
             """
     else:
-        html_content += f'<div class="no-match">በዚህ ቀን ({selected_date}) የተመዘገቡ ግጥሚያዎች የሉም።</div>'
+        html_content += f'<div class="no-match">No matches found for ({selected_date}).</div>'
         
     html_content += """
         </div>
