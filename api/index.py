@@ -1,7 +1,6 @@
 from flask import Flask, render_template_string, request
 from datetime import datetime, timedelta
 import requests
-from bs4 import BeautifulSoup
 
 app = Flask(__name__)
 
@@ -20,11 +19,7 @@ def home():
     
     matches = []
     try:
-        # እውነተኛ የሕዝብ መረጃ ከነጻ ምንጭ በቀጥታ መሳብ (Web Scraping / Public Score Source)
-        # ኳስ ውጤቶችን ከሚሰጥ ክፍት የውሂብ ምንጭ በቀጥታ እናመጣለን
-        url = f"https://raw.githubusercontent.com/openfootball/football.json/master/{datetime.strptime(selected_date, '%Y-%m-%d').strftime('%Y')}/{selected_date[:4]}-{selected_date[5:7]}.json"
-        
-        # አማራጭ አስተማማኝ እውነተኛ የሕዝብ መረጃ ማግኛ (Public JSON API Feed)
+        # እውነተኛ የሕዝብ የውጤት መጋቢ (Public ESPN API Feed)
         live_api_url = f"https://site.api.espn.com/apis/site/v2/sports/soccer/all/scoreboard?dates={selected_date.replace('-', '')}"
         
         response = requests.get(live_api_url, timeout=5)
@@ -45,7 +40,6 @@ def home():
                             away_team = team.get('team', {}).get('displayName', 'Away')
                             a_score = team.get('score', '-')
                     
-                    status_type = comp.get('status', {}).get('type', {}).get('name', 'STATUS_SCHEDULED')
                     status_detail = comp.get('status', {}).get('type', {}).get('shortDetail', 'TIMED')
                     
                     matches.append({
@@ -57,16 +51,15 @@ def home():
                         "status": status_detail
                     })
     except Exception as e:
-        print("Scraping Error:", e)
+        print("API Error:", e)
 
-    # እውነተኛ መረጃ ካልመጣ በዛ ቀን የተደረጉ እውነተኛ ግጥሚያዎች እንዳሉ የሚያሳይ ማስታወሻ
     html_content = f"""
     <!DOCTYPE html>
     <html>
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Koki Score - Live</title>
+        <title>Koki Score</title>
         <style>
             body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f8f9fa; margin: 0; padding: 0; }}
             .top-bar {{ background-color: #1b5e20; color: white; padding: 14px; text-align: center; font-size: 18px; font-weight: bold; }}
@@ -86,7 +79,7 @@ def home():
         </style>
     </head>
     <body>
-        <div class="top-bar">⚽ Koki Score Live ({selected_date})</div>
+        <div class="top-bar">⚽ Koki Score ({selected_date})</div>
         <div class="date-tabs">
     """
     
@@ -117,7 +110,7 @@ def home():
             </div>
             """
     else:
-        html_content += f'<div class="no-match">በዚህ ቀን ({selected_date}) የሚደረጉ እውነተኛ ግጥሚያዎች አልተገኙም ወይም በሂደት ላይ አሉ።</div>'
+        html_content += f'<div class="no-match">በዚህ ቀን ({selected_date}) የተመዘገቡ ግጥሚያዎች የሉም።</div>'
         
     html_content += """
         </div>
