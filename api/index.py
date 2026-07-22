@@ -59,6 +59,10 @@ def home():
                             away_team = team.get('team', {}).get('displayName', 'Away')
                             a_score = team.get('score', '-')
                     
+                    # የውሸት ወይም ያልታወቁ ቡድኖችን ማጣራት (Filter out mock/test entries)
+                    if home_team in ["Home", "Away"] or away_team in ["Home", "Away"] or not home_team or not away_team:
+                        continue
+
                     status_type = comp.get('status', {}).get('type', {}).get('name', '')
                     status_detail = comp.get('status', {}).get('type', {}).get('shortDetail', 'TIMED')
                     
@@ -106,7 +110,8 @@ def home():
                     text = item.get('text', '')
                     clock = item.get('clock', {}).get('displayValue', '')
                     team_obj = item.get('team', {}).get('displayName', '')
-                    match_details["events_list"].append({"text": text, "clock": clock, "team": team_obj})
+                    if text:
+                        match_details["events_list"].append({"text": text, "clock": clock, "team": team_obj})
                 
                 boxscore = det_data.get('boxscore', {}).get('teams', [])
                 if len(boxscore) >= 2:
@@ -117,7 +122,7 @@ def home():
                     for label in all_labels:
                         h_val = home_stats.get(label, '0')
                         a_val = away_stats.get(label, '0')
-                        # 0 ሆነው የሚመጡ ከንቱ ስታቲስቲክሶችን መዝለል
+                        # ትክክለኛ ስታቲስቲክስ ከሌለ (ሁለቱም 0 ከሆኑ) አናሳይም
                         if h_val != '0' or a_val != '0':
                             match_details["statistics"].append({
                                 "label": label,
@@ -151,13 +156,10 @@ def home():
                     
                     .stat-row { margin-bottom: 12px; }
                     .stat-info { display: flex; justify-content: space-between; font-size: 12px; font-weight: bold; color: #333; margin-bottom: 4px; }
-                    .stat-bars { display: flex; height: 6px; background: #eee; border-radius: 3px; overflow: hidden; }
-                    .stat-bar-home { background: #2e7d32; height: 100%; }
-                    .stat-bar-away { background: #1976d2; height: 100%; }
                     
                     .event-row { display: flex; align-items: center; font-size: 13px; padding: 8px 0; border-bottom: 1px solid #f1f1f1; color: #444; }
                     .event-time { font-weight: bold; color: #1b5e20; width: 45px; }
-                    .no-data { text-align: center; color: #888; font-size: 13px; padding: 20px 0; }
+                    .no-data { text-align: center; color: #888; font-size: 13px; padding: 15px 0; }
                 </style>
             </head>
             <body>
