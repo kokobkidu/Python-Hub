@@ -9,7 +9,6 @@ def home():
     selected_date = request.args.get('date', datetime.now().strftime('%Y-%m-%d'))
     match_id = request.args.get('match_id')
     
-    # የ7 ቀናት ማጣሪያ (Besoccer style)
     dates_list = []
     base_date = datetime.now() - timedelta(days=3)
     for i in range(7):
@@ -18,7 +17,6 @@ def home():
         d_label = d.strftime('%a %d %b')
         dates_list.append({'date': d_str, 'label': d_label})
     
-    # 100% የተሟላ መረጃ (ቅያሬዎችን በአማርኛ ማብራሪያ የያዘ)
     master_matches_db = {
         (datetime.now() - timedelta(days=3)).strftime('%Y-%m-%d'): [
             {
@@ -28,7 +26,7 @@ def home():
                 "h": 2, "a": 4, "status": "FT",
                 "scorers": "⚽ H. Diallo 22', 58', S. Mané 45+1', 84' | ⚽ Lucas Paquetá 11', Marquinhos 50'",
                 "cards": "🟟 Yellow Cards: I. Jakobs (Senegal) 34', Eder Militão (Brazil) 71'",
-                "subs": "🔄 የተደረጉ ቅያሬዎች:\n• ሴኔጋል፦ ኤን. ጃክሰን ገባ | ኤች. ዲያሎ ወጣ\n• ብራዚል፦ ሪቻርሊሶን ገባ | ሮድሪጎ ወጣ",
+                "subs": "🔄 Substitutions:\n• Senegal: N. Jackson IN, H. Diallo OUT\n• Brazil: Richarlison IN, Rodrygo OUT",
                 "stats": "Possession: 51% - 49% | Shots: 12 - 15 | Fouls: 11 - 13"
             }
         ],
@@ -40,7 +38,7 @@ def home():
                 "h": 3, "a": 1, "status": "FT",
                 "scorers": "⚽ A. Griezmann 15', 72', A. Morata 40' | ⚽ Y. En-Nesyri 55'",
                 "cards": "🟟 Yellow Cards: Koke 25', 🟨🟥 Red Card: Koke (Atletico) 88' (2nd Yellow)",
-                "subs": "🔄 የተደረጉ ቅያሬዎች:\n• አትሌቲኮ ማድሪድ፦ ممፊስ ዲፓይ ገባ | አልቫሮ ሞራታ ወጣ\n• ሴቪያ፦ ኦካምፖስ ገባ | ሉኬባኪዮ ወጣ",
+                "subs": "🔄 Substitutions:\n• Atletico: Memphis Depay IN, A. Morata OUT\n• Sevilla: Ocampos IN, Lukebakio OUT",
                 "stats": "Possession: 53% - 47% | Shots: 14 - 9 | Corners: 6 - 3"
             }
         ],
@@ -52,7 +50,7 @@ def home():
                 "h": 2, "a": 1, "status": "FT",
                 "scorers": "⚽ D. Núñez 85', 90+3' | ⚽ A. Gordon 25'",
                 "cards": "🟟 Yellow Cards: W. Endo 40', B. Guimarães 62'",
-                "subs": "🔄 የተደረጉ ቅያሬዎች:\n• ሊቨርፑል፦ ዳርዊን ኑኔዝ ገባ | ሉዊስ ዲያዝ ወጣ\n• ኒውካስል፦ ካልום ዊልሰን ገባ | አሌክሳንደር ኢሳክ ወጣ",
+                "subs": "🔄 Substitutions:\n• Liverpool: D. Núñez IN, L. Díaz OUT\n• Newcastle: C. Wilson IN, A. Isak OUT",
                 "stats": "Possession: 60% - 40% | Shots on Target: 9 - 4 | Fouls: 10 - 14"
             }
         ],
@@ -64,7 +62,7 @@ def home():
                 "h": 2, "a": 1, "status": "FT",
                 "scorers": "⚽ E. Džeko 45+2', 46' | ⚽ M. Hajdari 7'",
                 "cards": "🟟 Yellow Cards: D. Tadic 30', S. Szymanski 65'",
-                "subs": "🔄 የተደረጉ ቅያሬዎች:\n• ፍነርባህቼ፦ ጄንጊዝ ኡንደር ገባ | ዱሻን ታዲች ወጣ\n• ሉጋኖ፦ ቦት ሃይ ገባ | ማቲያ ሃጅዳሪ ወጣ",
+                "subs": "🔄 Substitutions:\n• Fenerbahce: C. Ünder IN, D. Tadic OUT\n• Lugano: Bot Heimat IN, M. Hajdari OUT",
                 "stats": "Possession: 58% - 42% | Shots: 18 - 8 | Corners: 7 - 2"
             }
         ],
@@ -74,9 +72,9 @@ def home():
                 "league": "🤝 Club International Friendlies",
                 "home": "AC Milan", "away": "Chelsea",
                 "h": "-", "a": "-", "status": "8:00 PM",
-                "scorers": "Upcoming Match",
+                "scorers": "Upcoming Match - Lineups pending",
                 "cards": "No cards yet",
-                "subs": "🔄 ቅያሬዎች ገና አልተደረጉም (ጨዋታው ገና አልጀመረም)",
+                "subs": "🔄 No substitutions yet",
                 "stats": "Pre-match analysis"
             }
         ],
@@ -88,7 +86,7 @@ def home():
                 "h": "-", "a": "-", "status": "6:30 PM",
                 "scorers": "Upcoming Match",
                 "cards": "No cards",
-                "subs": "🔄 ቅያሬዎች ገና አልተደረጉም",
+                "subs": "🔄 No substitutions yet",
                 "stats": "Bundesliga preview"
             }
         ],
@@ -100,7 +98,7 @@ def home():
                 "h": "-", "a": "-", "status": "9:45 PM",
                 "scorers": "Upcoming Match",
                 "cards": "No cards",
-                "subs": "🔄 ቅያሬዎች ገና አልተደረጉም",
+                "subs": "🔄 No substitutions yet",
                 "stats": "Serie A preview"
             }
         ]
@@ -129,7 +127,7 @@ def home():
                     .back-btn { display: inline-block; margin: 15px; color: #2e7d32; text-decoration: none; font-weight: bold; }
                     .container { padding: 15px; max-width: 600px; margin: auto; background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
                     .score-header { text-align: center; font-size: 22px; font-weight: bold; color: #2e7d32; margin: 20px 0; background: #e8f5e9; padding: 15px; border-radius: 6px; }
-                    .section-title { font-weight: bold; margin-top: 20px; color: #333; border-bottom: 2px solid #2e7d32; padding-bottom: 5px; font-size: 13px; }
+                    .section-title { font-weight: bold; margin-top: 20px; color: #333; border-bottom: 2px solid #2e7d32; padding-bottom: 5px; font-size: 13px; text-transform: uppercase; }
                     .content-box { background: #f9f9f9; padding: 10px; margin-top: 8px; border-radius: 4px; font-size: 13px; color: #555; white-space: pre-line; line-height: 1.5; }
                 </style>
             </head>
@@ -145,16 +143,16 @@ def home():
                         <div style="font-size: 12px; color: #666; margin-top: 5px;">Status: {{ match.status }}</div>
                     </div>
                     
-                    <div class="section-title">⚽ Goals & Scorers (ጎል ያስቆጠሩት)</div>
+                    <div class="section-title">⚽ Goals & Scorers</div>
                     <div class="content-box">{{ match.scorers }}</div>
                     
-                    <div class="section-title">🟨 Red & Yellow Cards (ካርዶች)</div>
+                    <div class="section-title">🟨 Red & Yellow Cards</div>
                     <div class="content-box">{{ match.cards }}</div>
                     
-                    <div class="section-title">🔄 Substitutions (ማን ወጣ / ማን ገባ)</div>
+                    <div class="section-title">🔄 Substitutions</div>
                     <div class="content-box">{{ match.subs }}</div>
                     
-                    <div class="section-title">📊 Match Statistics (የጨዋታው ሂደት)</div>
+                    <div class="section-title">📊 Match Statistics</div>
                     <div class="content-box">{{ match.stats }}</div>
                 </div>
             </body>
@@ -224,7 +222,7 @@ def home():
             </div>
             """
     else:
-        html_content += f'<div class="no-match">ለተመረጠው ቀን ({selected_date}) የተመዘገበ ግጥሚያ የለም።</div>'
+        html_content += f'<div class="no-match">No matches available for selected date ({selected_date}).</div>'
         
     html_content += """
         </div>
