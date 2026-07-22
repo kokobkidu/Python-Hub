@@ -94,7 +94,6 @@ def home():
     if match_id:
         selected_match = next((m for m in matches if m['id'] == match_id), None)
         
-        # ተጨማሪ የጎል ሰሪዎችን እና ስታቲስቲክስ ከኢኤስፒኤን የጨዋታ ዲቴል ኤፒአይ ለማምጣት
         match_details = {"events_list": [], "statistics": []}
         try:
             detail_url = f"https://site.api.espn.com/apis/site/v2/sports/soccer/all/summary?event={match_id}"
@@ -102,7 +101,6 @@ def home():
             if det_res.status_code == 200:
                 det_data = det_res.json()
                 
-                # የጎል ሰሪዎች እና ካርዶች (Goals & Events)
                 details_array = det_data.get('details', [])
                 for item in details_array:
                     text = item.get('text', '')
@@ -110,7 +108,6 @@ def home():
                     team_obj = item.get('team', {}).get('displayName', '')
                     match_details["events_list"].append({"text": text, "clock": clock, "team": team_obj})
                 
-                # የმატች ስታቲስቲክስ (Possession, Shots, etc.)
                 boxscore = det_data.get('boxscore', {}).get('teams', [])
                 for stats_team in boxscore:
                     t_name = stats_team.get('team', {}).get('displayName', '')
@@ -144,15 +141,15 @@ def home():
             </head>
             <body>
                 <div class="top-bar">⚽ Koki Score - Match Hub</div>
-                <div style="max-width: 600px; margin: auto;"><a href="/?date={{ date }}" class="back-btn">⬅ ወደ ዝርዝር ተመለስ</a></div>
+                <div style="max-width: 600px; margin: auto;"><a href="/?date={{ date }}" class="back-btn">⬅ Back to List</a></div>
                 <div class="container">
                     <h3 style="text-align: center; color: #555; font-size: 13px;">{{ match.league }}</h3>
                     <div class="score-header">
                         {{ match.home }} {{ match.h }} - {{ match.a }} {{ match.away }}
-                        <div style="font-size: 12px; color: #d32f2f; margin-top: 5px;">እንዳታ (Status): {{ match.status }}</div>
+                        <div style="font-size: 12px; color: #d32f2f; margin-top: 5px;">Status: {{ match.status }}</div>
                     </div>
 
-                    <div class="section-title">⚽ የጎል ሰሪዎች እና ዝርዝር ክስተቶች</div>
+                    <div class="section-title">⚽ Goal Events & Details</div>
                     {% if details.events_list %}
                         {% for ev in details.events_list %}
                             <div class="event-item">
@@ -161,10 +158,10 @@ def home():
                             </div>
                         {% endfor %}
                     {% else %}
-                        <p style="font-size: 13px; color: #777; text-align: center;">ለዚህ ግጥሚያ የተመዘገበ ጎል ወይም ክስተት የለም።</p>
+                        <p style="font-size: 13px; color: #777; text-align: center;">No specific match events or scorers available for this match.</p>
                     {% endif %}
 
-                    <div class="section-title">📊 የሜዳ ላይ ስታቲስቲክስ</div>
+                    <div class="section-title">📊 Match Statistics</div>
                     {% if details.statistics %}
                         {% for st in details.statistics %}
                             <div class="stat-row">
@@ -173,7 +170,7 @@ def home():
                             </div>
                         {% endfor %}
                     {% else %}
-                        <p style="font-size: 13px; color: #777; text-align: center;">ስታቲስቲክስ አልተገኘም (ግጥሚያው ገና ሳይጀምር ሲቀር መረጃው ላይኖር ይችላል)</p>
+                        <p style="font-size: 13px; color: #777; text-align: center;">Statistics not available yet.</p>
                     {% endif %}
                 </div>
             </body>
