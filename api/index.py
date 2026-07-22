@@ -1,4 +1,3 @@
-
 from flask import Flask, render_template_string, request
 from datetime import datetime, timedelta
 import requests
@@ -8,6 +7,7 @@ app = Flask(__name__)
 @app.route('/')
 def home():
     selected_date = request.args.get('date', datetime.now().strftime('%Y-%m-%d'))
+    match_id = request.args.get('match_id')
     
     dates_list = []
     base_date = datetime.now() - timedelta(days=3)
@@ -25,6 +25,7 @@ def home():
             data = response.json()
             events = data.get('events', [])
             for ev in events:
+                m_id = ev.get('id', '')
                 comp_name = ev.get('season', {}).get('slug', 'Football League').upper()
                 competitions = ev.get('competitions', [])
                 for comp in competitions:
@@ -41,7 +42,6 @@ def home():
                     status_type = comp.get('status', {}).get('type', {}).get('name', '')
                     status_detail = comp.get('status', {}).get('type', {}).get('shortDetail', 'TIMED')
                     
-                    # ጨዋታው በቀጥታ በሂደት ላይ ከሆነ (LIVE) ደቂቃውን ማሳየት
                     if status_type == 'STATUS_IN_PROGRESS':
                         clock = comp.get('status', {}).get('displayClock', '')
                         status_detail = f"{clock}' LIVE" if clock else "LIVE"
@@ -52,6 +52,7 @@ def home():
                             status_detail = dt_obj.strftime('%H:%M')
                     
                     matches.append({
+                        "id": m_id,
                         "league": comp_name,
                         "home": home_team,
                         "away": away_team,
@@ -61,6 +62,39 @@ def home():
                     })
     except Exception as e:
         print("API Error:", e)
+
+    # ሳጥኑ ሲነካ የሚከፈተው የዲቴል ገጽ
+    if match_id:
+        selected_match = next((m for m in matches if m['id'] == match_id), None)
+        if selected_match:
+            return render_template_string("""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Match Details</title>
+                <style>
+                    body { font-family: sans-serif; background: #f0f2f5; margin: 0; padding: 0; }
+                    .top-bar { background: #1b5e20; color: white; padding: 14px; text-align: center; font-size: 18px; font-weight: bold; }
+                    .back-btn { display: inline-block; margin: 15px; color: #1b5e20; text-decoration: none; font-weight: bold; }
+                    .container { padding: 15px; max-width: 600px; margin: auto; background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+                    .score-header { text-align: center; font-size: 20px; font-weight: bold; color: #1b5e20; margin: 20px 0; background: #e8f5e9; padding: 15px; border-radius: 6px; }
+                </style>
+            </head>
+            <body>
+                <div class="top-bar">⚽ Koki Score - Detail</div>
+                <div style="max-width: 600px; margin: auto;"><a href="/?date={{ date }}" class="back-btn">⬅ ተመለስ</a></div>
+                <div class="container">
+                    <h3>{{ match.league }}</h3>
+                    <div class="score-header">
+                        {{ match.home }} {{ match.h }} - {{ match.a }} {{ match.away }}
+                        <div style="font-size: 12px; color: #d32f2f; margin-top: 5px;">ሁኔታ: {{ match.status }}</div>
+                    </div>
+                    <p style="text-align: center; color: #666;">የዚህ ግጥሚያ ተጨማሪ ዝርዝሮች በሂደት ይጨመራሉ።</p>
+                </div>
+            </body>
+            </html>
+            """, match=selected_match, date=selected_date)
 
     html_content = f"""
     <!DOCTYPE html>
@@ -82,7 +116,7 @@ def home():
             .team {{ width: 38%; font-weight: 600; font-size: 13px; color: #212529; display: flex; align-items: center; }}
             .team.home {{ justify-content: flex-end; text-align: right; }}
             .team.away {{ justify-content: flex-start; text-align: left; }}
-            .score-box {{ width: 24%; text-align: center; background: #f1f8e9; padding: 6px 4px; border-radius: 6px; font-weight: bold; font-size: 14px; color: #2e7d32; border: 1px solid #dcedc8; }}
+            .score-box {{ width: 24%; text-align: center; background: #f1f8e9; padding: 6px 4px; border-radius: 6px; font-weight: bold; font-size: 14px; color: #2e7d32; border: 1px solid #dcedc8; text-decoration: none; display: block; }}
             .match-status {{ font-size: 10px; color: #d32f2f; margin-top: 2px; text-transform: uppercase; font-weight: bold; }}
             .no-match {{ text-align: center; padding: 40px 20px; color: #6c757d; font-weight: 500; background: white; border-radius: 8px; margin-top: 20px; }}
         </style>
@@ -111,10 +145,10 @@ def home():
             html_content += f"""
             <div class="match-card">
                 <div class="team home"><span>{match['home']}</span></div>
-                <div class="score-box">
+                <a href="/?date={selected_date}&match_id={match['id']}" class="score-box">
                     {match['h']} - {match['a']}
                     <div class="match-status">{match['status']}</div>
-                </div>
+                </a>
                 <div class="team away"><span>{match['away']}</span></div>
             </div>
             """
