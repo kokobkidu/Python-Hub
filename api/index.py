@@ -1,14 +1,19 @@
-
 from flask import Flask, render_template_string, request
+import requests
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
+
+API_KEY = "276477041ca34aa6924720392f56415d"
+BASE_URL = "https://api.football-data.org/v4"
+HEADERS = {"X-Auth-Token": API_KEY}
 
 @app.route('/')
 def home():
     selected_date = request.args.get('date', datetime.now().strftime('%Y-%m-%d'))
     match_id = request.args.get('match_id')
     
+    # የ7 ቀናት ማጣሪያ ታብ (ለተጠቃሚዎች)
     dates_list = []
     base_date = datetime.now() - timedelta(days=3)
     for i in range(7):
@@ -17,101 +22,73 @@ def home():
         d_label = d.strftime('%a %d %b')
         dates_list.append({'date': d_str, 'label': d_label})
     
-    master_matches_db = {
-        (datetime.now() - timedelta(days=3)).strftime('%Y-%m-%d'): [
-            {
-                "id": "d3-1",
-                "league": "🌍 International Friendly Matches",
-                "home": "Brazil", "away": "Senegal",
-                "h": 2, "a": 4, "status": "FT",
-                "scorers": "⚽ H. Diallo 22', 58', S. Mané 45+1', 84' | ⚽ Lucas Paquetá 11', Marquinhos 50'",
-                "cards": "🟟 Yellow Cards: I. Jakobs (Senegal) 34', Eder Militão (Brazil) 71'",
-                "subs": "🔄 Substitutions:\n• Senegal: N. Jackson IN, H. Diallo OUT\n• Brazil: Richarlison IN, Rodrygo OUT",
-                "stats": "Possession: 51% - 49% | Shots: 12 - 15 | Fouls: 11 - 13"
-            }
-        ],
-        (datetime.now() - timedelta(days=2)).strftime('%Y-%m-%d'): [
-            {
-                "id": "d2-1",
-                "league": "🇪🇸 Spanish La Liga - Classic Fixture",
-                "home": "Atletico Madrid", "away": "Sevilla",
-                "h": 3, "a": 1, "status": "FT",
-                "scorers": "⚽ A. Griezmann 15', 72', A. Morata 40' | ⚽ Y. En-Nesyri 55'",
-                "cards": "🟟 Yellow Cards: Koke 25', 🟨🟥 Red Card: Koke (Atletico) 88' (2nd Yellow)",
-                "subs": "🔄 Substitutions:\n• Atletico: Memphis Depay IN, A. Morata OUT\n• Sevilla: Ocampos IN, Lukebakio OUT",
-                "stats": "Possession: 53% - 47% | Shots: 14 - 9 | Corners: 6 - 3"
-            }
-        ],
-        (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d'): [
-            {
-                "id": "d1-1",
-                "league": "🏴󠁧󠁢󠁥󠁮󠁧󠁿 English Premier League - High Intensity",
-                "home": "Liverpool", "away": "Newcastle United",
-                "h": 2, "a": 1, "status": "FT",
-                "scorers": "⚽ D. Núñez 85', 90+3' | ⚽ A. Gordon 25'",
-                "cards": "🟟 Yellow Cards: W. Endo 40', B. Guimarães 62'",
-                "subs": "🔄 Substitutions:\n• Liverpool: D. Núñez IN, L. Díaz OUT\n• Newcastle: C. Wilson IN, A. Isak OUT",
-                "stats": "Possession: 60% - 40% | Shots on Target: 9 - 4 | Fouls: 10 - 14"
-            }
-        ],
-        datetime.now().strftime('%Y-%m-%d'): [
-            {
-                "id": "today-1",
-                "league": "🏆 UEFA Champions League - Qualifiers",
-                "home": "Fenerbahce", "away": "Lugano",
-                "h": 2, "a": 1, "status": "FT",
-                "scorers": "⚽ E. Džeko 45+2', 46' | ⚽ M. Hajdari 7'",
-                "cards": "🟟 Yellow Cards: D. Tadic 30', S. Szymanski 65'",
-                "subs": "🔄 Substitutions:\n• Fenerbahce: C. Ünder IN, D. Tadic OUT\n• Lugano: Bot Heimat IN, M. Hajdari OUT",
-                "stats": "Possession: 58% - 42% | Shots: 18 - 8 | Corners: 7 - 2"
-            }
-        ],
-        (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d'): [
-            {
-                "id": "p1-1",
-                "league": "🤝 Club International Friendlies",
-                "home": "AC Milan", "away": "Chelsea",
-                "h": "-", "a": "-", "status": "8:00 PM",
-                "scorers": "Upcoming Match - Lineups pending",
-                "cards": "No cards yet",
-                "subs": "🔄 No substitutions yet",
-                "stats": "Pre-match analysis"
-            }
-        ],
-        (datetime.now() + timedelta(days=2)).strftime('%Y-%m-%d'): [
-            {
-                "id": "p2-1",
-                "league": "🇩🇪 German Bundesliga - Preview",
-                "home": "Borussia Dortmund", "away": "RB Leipzig",
-                "h": "-", "a": "-", "status": "6:30 PM",
-                "scorers": "Upcoming Match",
-                "cards": "No cards",
-                "subs": "🔄 No substitutions yet",
-                "stats": "Bundesliga preview"
-            }
-        ],
-        (datetime.now() + timedelta(days=3)).strftime('%Y-%m-%d'): [
-            {
-                "id": "p3-1",
-                "league": "🇮🇹 Italian Serie A - Preview",
-                "home": "Napoli", "away": "Lazio",
-                "h": "-", "a": "-", "status": "9:45 PM",
-                "scorers": "Upcoming Match",
-                "cards": "No cards",
-                "subs": "🔄 No substitutions yet",
-                "stats": "Serie A preview"
-            }
-        ]
-    }
+    # ከ football-data.org እውነተኛውን ዳታ መጥራት (Fetch Live Data)
+    matches = []
+    try:
+        url = f"{BASE_URL}/matches?date={selected_date}"
+        response = requests.get(url, headers=HEADERS, timeout=5)
+        if response.status_code == 200:
+            data = response.json()
+            for m in data.get('matches', []):
+                # የውድድሩን ስም እና ቡድኖች ማውጣት
+                competition_name = m.get('competition', {}).get('name', 'Football Match')
+                area_name = m.get('competition', {}).get('area', {}).get('name', '')
+                league_display = f"{area_name} - {competition_name}" if area_name else competition_name
+                
+                home_team = m.get('homeTeam', {}).get('name', 'Home')
+                away_team = m.get('awayTeam', {}).get('name', 'Away')
+                
+                score_info = m.get('score', {}).get('fullTime', {})
+                h_goals = score_info.get('home')
+                a_goals = score_info.get('away')
+                
+                status = m.get('status', 'SCHEDULED')
+                
+                matches.append({
+                    "id": str(m.get('id')),
+                    "league": league_display,
+                    "home": home_team,
+                    "away": away_team,
+                    "h": h_goals if h_goals is not None else "-",
+                    "a": a_goals if a_goals is not None else "-",
+                    "status": status,
+                    "utcDate": m.get('utcDate', '')
+                })
+    except Exception as e:
+        print("API Error:", e)
     
-    matches = master_matches_db.get(selected_date, [])
-    
+    # ዝርዝር ግጥሚያ (Match Detail) ከጠየቁ
     if match_id:
         selected_match = None
         for m in matches:
             if m['id'] == match_id:
                 selected_match = m
                 break
+        
+        # ካልተገኘ በሰርቨሩ ውስጥ ያለውን ነጠላ ግጥሚያ መፈለግ
+        if not selected_match:
+            try:
+                single_url = f"{BASE_URL}/matches/{match_id}"
+                s_resp = requests.get(single_url, headers=HEADERS, timeout=5)
+                if s_resp.status_code == 200:
+                    m = s_resp.json()
+                    competition_name = m.get('competition', {}).get('name', 'Match Detail')
+                    home_team = m.get('homeTeam', {}).get('name', 'Home')
+                    away_team = m.get('awayTeam', {}).get('name', 'Away')
+                    score_info = m.get('score', {}).get('fullTime', {})
+                    
+                    selected_match = {
+                        "id": str(m.get('id')),
+                        "league": competition_name,
+                        "home": home_team,
+                        "away": away_team,
+                        "h": score_info.get('home', '-'),
+                        "a": score_info.get('away', '-'),
+                        "status": m.get('status', ''),
+                        referees: m.get('referees', [])
+                    }
+            except Exception as e:
+                print("Single Match Error:", e)
                 
         if selected_match:
             return render_template_string("""
@@ -143,17 +120,8 @@ def home():
                         <div style="font-size: 12px; color: #666; margin-top: 5px;">Status: {{ match.status }}</div>
                     </div>
                     
-                    <div class="section-title">⚽ Goals & Scorers</div>
-                    <div class="content-box">{{ match.scorers }}</div>
-                    
-                    <div class="section-title">🟨 Red & Yellow Cards</div>
-                    <div class="content-box">{{ match.cards }}</div>
-                    
-                    <div class="section-title">🔄 Substitutions</div>
-                    <div class="content-box">{{ match.subs }}</div>
-                    
-                    <div class="section-title">📊 Match Statistics</div>
-                    <div class="content-box">{{ match.stats }}</div>
+                    <div class="section-title">⚽ Live Match Information</div>
+                    <div class="content-box">Data fetched directly from official live sports servers. Kickoff/Status: {{ match.status }}</div>
                 </div>
             </body>
             </html>
@@ -190,7 +158,7 @@ def home():
         </style>
     </head>
     <body>
-        <div class="top-bar">⚽ Koki Score</div>
+        <div class="top-bar">⚽ Koki Score (Live API)</div>
         
         <div class="date-tabs">
     """
@@ -222,7 +190,7 @@ def home():
             </div>
             """
     else:
-        html_content += f'<div class="no-match">No matches available for selected date ({selected_date}).</div>'
+        html_content += f'<div class="no-match">No live matches found for selected date ({selected_date}) or API limit reached.</div>'
         
     html_content += """
         </div>
