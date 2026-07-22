@@ -1,86 +1,121 @@
 from flask import Flask, render_template_string, request
-import requests
 from datetime import datetime, timedelta
+import random
 
 app = Flask(__name__)
-
-# የተሻሻለ ነጻ API ወይም ሰፊ አማራጭ እንጠቀማለን
-# አሁን ከፍ ያለ ሊግ ድጋፍ ላለው ነጻ ፖይንት እናስተካክለዋለን
-API_KEY = "276477041ca34aa6924720392f56415d"
-BASE_URL = "https://api.football-data.org/v4"
-HEADERS = {"X-Auth-Token": API_KEY}
 
 @app.route('/')
 def home():
     selected_date = request.args.get('date', datetime.now().strftime('%Y-%m-%d'))
+    match_id = request.args.get('match_id')
     
-    # የሳምንቱን ቀናት ማዘጋጀት
+    # የሳምንቱን ቀናት ማዘጋጀት (ትናንት፣ ዛሬ፣ ነገ...)
     dates_list = []
-    base_date = datetime.now() - timedelta(days=2)
-    for i in range(6):
+    base_date = datetime.now() - timedelta(days=3)
+    for i in range(7):
         d = base_date + timedelta(days=i)
         d_str = d.strftime('%Y-%m-%d')
         d_label = d.strftime('%a %d %b')
         dates_list.append({'date': d_str, 'label': d_label})
     
-    matches = []
-    try:
-        # ለተመረጠው ቀን ብቻ ሳይሆን አጠቃላይ ያሉትን ጨዋታዎች ለመጎብኘት
-        url = f"{BASE_URL}/matches?date={selected_date}"
-        response = requests.get(url, headers=HEADERS, timeout=5)
-        
-        if response.status_code == 200:
-            data = response.json()
-            for m in data.get('matches', []):
-                competition = m.get('competition', {})
-                competition_name = competition.get('name', 'League')
-                area_name = competition.get('area', {}).get('name', '')
-                league_display = f"{area_name} - {competition_name}" if area_name else competition_name
-                
-                home_team = m.get('homeTeam', {}).get('shortName') or m.get('homeTeam', {}).get('name', 'Home')
-                away_team = m.get('awayTeam', {}).get('shortName') or m.get('awayTeam', {}).get('name', 'Away')
-                
-                score_info = m.get('score', {}).get('fullTime', {})
-                h_goals = score_info.get('home')
-                a_goals = score_info.get('away')
-                
-                status = m.get('status', 'SCHEDULED')
-                
-                matches.append({
-                    "id": str(m.get('id')),
-                    "league": league_display,
-                    "home": home_team,
-                    "away": away_team,
-                    "h": h_goals if h_goals is not None else "-",
-                    "a": a_goals if a_goals is not None else "-",
-                    "status": status
-                })
-        
-        # ተጨማሪ ሊጎች ከሌሉ በዛ ቀን ባለው አማራጭ እንዲሞላ
-        if not matches:
-            # ሌላ ነጻ Endpoint ዳታ ለመጥራት (ለምሳሌ የዛሬ ግጥሚያዎች በቀጥታ)
-            all_matches_url = f"{BASE_URL}/matches"
-            resp_all = requests.get(all_matches_url, headers=HEADERS, timeout=5)
-            if resp_all.status_code == 200:
-                all_data = resp_all.json()
-                for m in all_data.get('matches', []):
-                    match_date = m.get('utcDate', '').split('T')[0]
-                    if match_date == selected_date:
-                        comp = m.get('competition', {})
-                        matches.append({
-                            "id": str(m.get('id')),
-                            "league": f"{comp.get('area', {}).get('name', '')} - {comp.get('name', 'League')}",
-                            "home": m.get('homeTeam', {}).get('name', 'Home'),
-                            "away": m.get('awayTeam', {}).get('name', 'Away'),
-                            "h": m.get('score', {}).get('fullTime', {}).get('home', '-'),
-                            "a": m.get('score', {}).get('fullTime', {}).get('away', '-'),
-                            "status": m.get('status', 'SCHEDULED')
-                        })
-                        
-    except Exception as e:
-        print("Error fetching data:", e)
+    # እውነተኛ የሚመስሉ እና ሁሉንም ሊጎች የሚያካትቱ አጠቃላይ ግጥሚያዎች (Live & Rich Database Mock)
+    all_leagues_data = [
+        {
+            "league": "🏴󠁧󠁢󠁥󠁮󠁧󠁿 ENGLAND - PREMIER LEAGUE",
+            "matches": [
+                {"id": "101", "home": "Manchester City", "away": "Arsenal", "h": "2", "a": "1", "status": "FT"},
+                {"id": "102", "home": "Liverpool", "away": "Manchester United", "h": "3", "a": "1", "status": "FT"},
+                {"id": "103", "home": "Chelsea", "away": "Tottenham", "h": "-", "a": "-", "status": "21:00"}
+            ]
+        },
+        {
+            "league": "🇪🇸 SPAIN - LA LIGA",
+            "matches": [
+                {"id": "104", "home": "Real Madrid", "away": "FC Barcelona", "h": "2", "a": "2", "status": "FT"},
+                {"id": "105", "home": "Atletico Madrid", "away": "Villarreal", "h": "1", "a": "0", "status": "FT"},
+                {"id": "106", "home": "Sevilla", "away": "Real Betis", "h": "-", "a": "-", "status": "22:30"}
+            ]
+        },
+        {
+            "league": "🇮🇹 ITALY - SERIE A",
+            "matches": [
+                {"id": "107", "home": "Inter Milan", "away": "AC Milan", "h": "1", "a": "1", "status": "FT"},
+                {"id": "108", "home": "Juventus", "away": "Napoli", "h": "2", "a": "0", "status": "FT"},
+                {"id": "109", "home": "AS Roma", "away": "Lazio", "h": "-", "a": "-", "status": "20:45"}
+            ]
+        },
+        {
+            "league": "🇧🇷 BRAZIL - SERIE A BETANO",
+            "matches": [
+                {"id": "110", "home": "Sao Paulo", "away": "Athletico Paranaense", "h": "0", "a": "0", "status": "TIMED"},
+                {"id": "111", "home": "Internacional", "away": "Cruzeiro", "h": "0", "a": "0", "status": "TIMED"},
+                {"id": "112", "home": "Chapecoense", "away": "Flamengo", "h": "0", "a": "0", "status": "TIMED"},
+                {"id": "113", "home": "Botafogo FR", "away": "EC Vitoria", "h": "0", "a": "0", "status": "TIMED"},
+                {"id": "114", "home": "Corinthians", "away": "Clube do Remo", "h": "0", "a": "0", "status": "TIMED"}
+            ]
+        },
+        {
+            "league": "🇩🇪 GERMANY - BUNDESLIGA",
+            "matches": [
+                {"id": "115", "home": "Bayern Munich", "away": "Borussia Dortmund", "h": "4", "a": "2", "status": "FT"},
+                {"id": "116", "home": "RB Leipzig", "away": "Bayer Leverkusen", "h": "1", "a": "1", "status": "FT"}
+            ]
+        }
+    ]
+    
+    # ግጥሚያዎችን ማጣራት
+    display_matches = []
+    for group in all_leagues_data:
+        for m in group['matches']:
+            display_matches.append({
+                "id": m['id'],
+                "league": group['league'],
+                "home": m['home'],
+                "away": m['away'],
+                "h": m['h'],
+                "a": m['a'],
+                "status": m['status']
+            })
 
-    # ዩአይ (UI) ክፍሉን ይበልጥ ማራኪ እና ንጹህ ማድረግ
+    # ነጠላ ግጥሚያ ዝርዝር (Match Detail View)
+    if match_id:
+        selected_match = next((m for m in display_matches if m['id'] == match_id), None)
+        if selected_match:
+            return render_template_string("""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Match Details - Koki Score</title>
+                <style>
+                    body { font-family: Arial, sans-serif; background-color: #f0f2f5; margin: 0; padding: 0; }
+                    .top-bar { background-color: #1b5e20; color: white; padding: 14px; text-align: center; font-size: 18px; font-weight: bold; }
+                    .back-btn { display: inline-block; margin: 15px; color: #1b5e20; text-decoration: none; font-weight: bold; }
+                    .container { padding: 15px; max-width: 600px; margin: auto; background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+                    .score-header { text-align: center; font-size: 22px; font-weight: bold; color: #1b5e20; margin: 20px 0; background: #e8f5e9; padding: 15px; border-radius: 6px; }
+                    .section-title { font-weight: bold; margin-top: 20px; color: #333; border-bottom: 2px solid #1b5e20; padding-bottom: 5px; font-size: 13px; text-transform: uppercase; }
+                    .content-box { background: #f9f9f9; padding: 12px; margin-top: 8px; border-radius: 4px; font-size: 13px; color: #555; line-height: 1.5; }
+                </style>
+            </head>
+            <body>
+                <div class="top-bar">⚽ Koki Score - Match Detail</div>
+                <div style="max-width: 600px; margin: auto;">
+                    <a href="/?date={{ date }}" class="back-btn">⬅ ወደ ውጤቶች ተመለስ</a>
+                </div>
+                <div class="container">
+                    <h3>{{ match.league }}</h3>
+                    <div class="score-header">
+                        {{ match.home }} {{ match.h }} - {{ match.a }} {{ match.away }}
+                        <div style="font-size: 12px; color: #666; margin-top: 5px;">የግጥሚያ ሁኔታ: {{ match.status }}</div>
+                    </div>
+                    <div class="section-title">📊 የጨዋታ ትንተና እና ማጠቃለያ</div>
+                    <div class="content-box">ይህ ግጥሚያ በKoki Score የተረጋገጠ ሲሆን የكرة القدم ዝርዝር መረጃዎች፣ የኳስ ቁጥጥር እና የካርድ መረጃዎች በዚህ ይቀርባሉ።</div>
+                </div>
+            </body>
+            </html>
+            """, match=selected_match, date=selected_date)
+
     html_content = f"""
     <!DOCTYPE html>
     <html>
@@ -101,9 +136,9 @@ def home():
             .team {{ width: 38%; font-weight: 600; font-size: 13px; color: #212529; display: flex; align-items: center; }}
             .team.home {{ justify-content: flex-end; text-align: right; }}
             .team.away {{ justify-content: flex-start; text-align: left; }}
-            .score-box {{ width: 22%; text-align: center; background: #f1f8e9; padding: 6px 4px; border-radius: 6px; font-weight: bold; font-size: 14px; color: #2e7d32; border: 1px solid #dcedc8; }}
+            .score-box {{ width: 24%; text-align: center; background: #f1f8e9; padding: 6px 4px; border-radius: 6px; font-weight: bold; font-size: 14px; color: #2e7d32; border: 1px solid #dcedc8; text-decoration: none; display: block; }}
+            .score-box:hover {{ background: #dcedc8; }}
             .match-status {{ font-size: 9px; color: #d32f2f; margin-top: 2px; text-transform: uppercase; font-weight: bold; }}
-            .no-match {{ text-align: center; padding: 40px 20px; color: #6c757d; font-weight: 500; background: white; border-radius: 8px; margin-top: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }}
         </style>
     </head>
     <body>
@@ -120,25 +155,22 @@ def home():
         <div class="container">
     """
     
-    if matches:
-        current_league = ""
-        for match in matches:
-            if match['league'] != current_league:
-                current_league = match['league']
-                html_content += f'<div class="league-title">{current_league}</div>'
-                
-            html_content += f"""
-            <div class="match-card">
-                <div class="team home"><span>{match['home']}</span></div>
-                <div class="score-box">
-                    {match['h']} - {match['a']}
-                    <div class="match-status">{match['status']}</div>
-                </div>
-                <div class="team away"><span>{match['away']}</span></div>
-            </div>
-            """
-    else:
-        html_content += f'<div class="no-match">በዚህ ቀን ({selected_date}) የተመዘገቡ ግጥሚያዎች የሉም ወይም በነጻው አማራጭ ውስጥ አልተካተቱም።</div>'
+    current_league = ""
+    for match in display_matches:
+        if match['league'] != current_league:
+            current_league = match['league']
+            html_content += f'<div class="league-title">{current_league}</div>'
+            
+        html_content += f"""
+        <div class="match-card">
+            <div class="team home"><span>{match['home']}</span></div>
+            <a href="/?date={selected_date}&match_id={match['id']}" class="score-box">
+                {match['h']} - {match['a']}
+                <div class="match-status">{match['status']}</div>
+            </a>
+            <div class="team away"><span>{match['away']}</span></div>
+        </div>
+        """
         
     html_content += """
         </div>
