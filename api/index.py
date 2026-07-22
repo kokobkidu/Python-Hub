@@ -109,15 +109,21 @@ def home():
                     match_details["events_list"].append({"text": text, "clock": clock, "team": team_obj})
                 
                 boxscore = det_data.get('boxscore', {}).get('teams', [])
-                for stats_team in boxscore:
-                    t_name = stats_team.get('team', {}).get('displayName', '')
-                    stats_list = stats_team.get('statistics', [])
-                    for st in stats_list:
-                        match_details["statistics"].append({
-                            "team": t_name,
-                            "label": st.get('label', ''),
-                            "value": st.get('displayValue', '')
-                        })
+                if len(boxscore) >= 2:
+                    home_stats = {st.get('label'): st.get('displayValue', '0') for st in boxscore[0].get('statistics', [])}
+                    away_stats = {st.get('label'): st.get('displayValue', '0') for st in boxscore[1].get('statistics', [])}
+                    
+                    all_labels = set(home_stats.keys()).union(set(away_stats.keys()))
+                    for label in all_labels:
+                        h_val = home_stats.get(label, '0')
+                        a_val = away_stats.get(label, '0')
+                        # 0 ሆነው የሚመጡ ከንቱ ስታቲስቲክሶችን መዝለል
+                        if h_val != '0' or a_val != '0':
+                            match_details["statistics"].append({
+                                "label": label,
+                                "home": h_val,
+                                "away": a_val
+                            })
         except Exception as err:
             print("Detail API Error:", err)
 
@@ -127,51 +133,79 @@ def home():
             <html>
             <head>
                 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>Match Details & Stats</title>
+                <title>{{ match.home }} vs {{ match.away }} - Koki Score</title>
                 <style>
-                    body { font-family: sans-serif; background: #f0f2f5; margin: 0; padding: 0; }
-                    .top-bar { background: #1b5e20; color: white; padding: 14px; text-align: center; font-size: 18px; font-weight: bold; }
-                    .back-btn { display: inline-block; margin: 15px; color: #1b5e20; text-decoration: none; font-weight: bold; }
-                    .container { padding: 15px; max-width: 600px; margin: auto; background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; }
-                    .score-header { text-align: center; font-size: 20px; font-weight: bold; color: #1b5e20; margin: 10px 0; background: #e8f5e9; padding: 15px; border-radius: 6px; }
-                    .section-title { font-size: 14px; font-weight: bold; color: #333; margin-top: 20px; margin-bottom: 10px; border-bottom: 2px solid #2e7d32; padding-bottom: 5px; text-transform: uppercase; }
-                    .event-item { font-size: 13px; color: #444; padding: 6px 0; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; }
-                    .stat-row { font-size: 13px; display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #f9f9f9; }
+                    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f6f9; margin: 0; padding: 0; }
+                    .top-bar { background: #1b5e20; color: white; padding: 14px; text-align: center; font-size: 18px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+                    .back-btn { display: inline-block; margin: 12px 15px; color: #1b5e20; text-decoration: none; font-weight: bold; font-size: 14px; }
+                    .container { padding: 0 15px 20px 15px; max-width: 600px; margin: auto; }
+                    .match-header-card { background: white; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); padding: 20px; text-align: center; margin-bottom: 15px; }
+                    .league-badge { font-size: 11px; font-weight: bold; color: #2e7d32; text-transform: uppercase; margin-bottom: 10px; background: #e8f5e9; display: inline-block; padding: 4px 10px; border-radius: 20px; }
+                    .teams-score { display: flex; justify-content: space-between; align-items: center; font-size: 16px; font-weight: bold; color: #333; margin: 15px 0; }
+                    .team-name { width: 38%; text-align: center; word-wrap: break-word; }
+                    .score-badge { background: #1b5e20; color: white; padding: 8px 16px; border-radius: 8px; font-size: 20px; font-weight: bold; }
+                    .status-badge { font-size: 11px; color: #d32f2f; text-transform: uppercase; font-weight: bold; margin-top: 8px; }
+                    
+                    .card-box { background: white; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); padding: 15px; margin-bottom: 15px; }
+                    .section-title { font-size: 13px; font-weight: bold; color: #555; margin-bottom: 15px; text-transform: uppercase; border-left: 4px solid #1b5e20; padding-left: 8px; }
+                    
+                    .stat-row { margin-bottom: 12px; }
+                    .stat-info { display: flex; justify-content: space-between; font-size: 12px; font-weight: bold; color: #333; margin-bottom: 4px; }
+                    .stat-bars { display: flex; height: 6px; background: #eee; border-radius: 3px; overflow: hidden; }
+                    .stat-bar-home { background: #2e7d32; height: 100%; }
+                    .stat-bar-away { background: #1976d2; height: 100%; }
+                    
+                    .event-row { display: flex; align-items: center; font-size: 13px; padding: 8px 0; border-bottom: 1px solid #f1f1f1; color: #444; }
+                    .event-time { font-weight: bold; color: #1b5e20; width: 45px; }
+                    .no-data { text-align: center; color: #888; font-size: 13px; padding: 20px 0; }
                 </style>
             </head>
             <body>
-                <div class="top-bar">⚽ Koki Score - Match Hub</div>
-                <div style="max-width: 600px; margin: auto;"><a href="/?date={{ date }}" class="back-btn">⬅ Back to List</a></div>
+                <div class="top-bar">⚽ Koki Score Hub</div>
+                <div style="max-width: 600px; margin: auto;"><a href="/?date={{ date }}" class="back-btn">⬅ Back to Matches</a></div>
+                
                 <div class="container">
-                    <h3 style="text-align: center; color: #555; font-size: 13px;">{{ match.league }}</h3>
-                    <div class="score-header">
-                        {{ match.home }} {{ match.h }} - {{ match.a }} {{ match.away }}
-                        <div style="font-size: 12px; color: #d32f2f; margin-top: 5px;">Status: {{ match.status }}</div>
+                    <div class="match-header-card">
+                        <div class="league-badge">{{ match.league }}</div>
+                        <div class="teams-score">
+                            <div class="team-name">{{ match.home }}</div>
+                            <div class="score-badge">{{ match.h }} - {{ match.a }}</div>
+                            <div class="team-name">{{ match.away }}</div>
+                        </div>
+                        <div class="status-badge">Status: {{ match.status }}</div>
                     </div>
 
-                    <div class="section-title">⚽ Goal Events & Details</div>
-                    {% if details.events_list %}
-                        {% for ev in details.events_list %}
-                            <div class="event-item">
-                                <span><b>{{ ev.clock }}'</b> - {{ ev.text }}</span>
-                                <span style="color: #666; font-size: 11px;">{{ ev.team }}</span>
-                            </div>
-                        {% endfor %}
-                    {% else %}
-                        <p style="font-size: 13px; color: #777; text-align: center;">No specific match events or scorers available for this match.</p>
-                    {% endif %}
+                    <div class="card-box">
+                        <div class="section-title">⚽ Goal Events & Timeline</div>
+                        {% if details.events_list %}
+                            {% for ev in details.events_list %}
+                                <div class="event-row">
+                                    <div class="event-time">{{ ev.clock }}'</div>
+                                    <div style="flex-grow: 1;">{{ ev.text }}</div>
+                                    <div style="font-size: 11px; color: #666; font-weight: bold;">{{ ev.team }}</div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="no-data">No match events or goals recorded for this game.</div>
+                        {% endif %}
+                    </div>
 
-                    <div class="section-title">📊 Match Statistics</div>
-                    {% if details.statistics %}
-                        {% for st in details.statistics %}
-                            <div class="stat-row">
-                                <span><b>{{ st.team }}</b></span>
-                                <span>{{ st.label }}: <b>{{ st.value }}</b></span>
-                            </div>
-                        {% endfor %}
-                    {% else %}
-                        <p style="font-size: 13px; color: #777; text-align: center;">Statistics not available yet.</p>
-                    {% endif %}
+                    <div class="card-box">
+                        <div class="section-title">📊 Match Statistics</div>
+                        {% if details.statistics %}
+                            {% for st in details.statistics %}
+                                <div class="stat-row">
+                                    <div class="stat-info">
+                                        <span>{{ st.home }}</span>
+                                        <span style="color: #666; text-transform: uppercase; font-size: 11px;">{{ st.label }}</span>
+                                        <span>{{ st.away }}</span>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="no-data">Detailed statistics are not available for this match.</div>
+                        {% endif %}
+                    </div>
                 </div>
             </body>
             </html>
@@ -185,21 +219,22 @@ def home():
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Koki Score</title>
         <style>
-            body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f8f9fa; margin: 0; padding: 0; }}
-            .top-bar {{ background-color: #1b5e20; color: white; padding: 14px; text-align: center; font-size: 18px; font-weight: bold; }}
+            body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f4f6f9; margin: 0; padding: 0; }}
+            .top-bar {{ background-color: #1b5e20; color: white; padding: 14px; text-align: center; font-size: 18px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
             .date-tabs {{ display: flex; background-color: #2e7d32; overflow-x: auto; white-space: nowrap; scrollbar-width: none; padding: 0 5px; }}
             .date-tabs::-webkit-scrollbar {{ display: none; }}
             .date-tab {{ color: #c8e6c9; padding: 12px 18px; text-decoration: none; font-size: 13px; font-weight: bold; text-align: center; display: inline-block; border-bottom: 3px solid transparent; }}
             .date-tab.active {{ color: white; border-bottom: 3px solid #ffeb3b; background-color: rgba(0,0,0,0.1); }}
             .container {{ padding: 12px; max-width: 600px; margin: auto; }}
-            .league-title {{ font-size: 11px; font-weight: bold; color: #444; margin: 16px 4px 6px 4px; text-transform: uppercase; background: #e9ecef; padding: 6px 10px; border-radius: 4px; border-left: 4px solid #2e7d32; }}
-            .match-card {{ background: white; margin-bottom: 8px; padding: 12px 8px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }}
+            .league-title {{ font-size: 11px; font-weight: bold; color: #444; margin: 16px 4px 6px 4px; text-transform: uppercase; background: #e9ecef; padding: 6px 10px; border-radius: 6px; border-left: 4px solid #2e7d32; }}
+            .match-card {{ background: white; margin-bottom: 8px; padding: 14px 10px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.03); display: flex; justify-content: space-between; align-items: center; transition: transform 0.1s; }}
+            .match-card:active {{ transform: scale(0.98); }}
             .team {{ width: 38%; font-weight: 600; font-size: 13px; color: #212529; display: flex; align-items: center; }}
             .team.home {{ justify-content: flex-end; text-align: right; }}
             .team.away {{ justify-content: flex-start; text-align: left; }}
-            .score-box {{ width: 24%; text-align: center; background: #f1f8e9; padding: 6px 4px; border-radius: 6px; font-weight: bold; font-size: 14px; color: #2e7d32; border: 1px solid #dcedc8; text-decoration: none; display: block; }}
+            .score-box {{ width: 26%; text-align: center; background: #e8f5e9; padding: 6px 4px; border-radius: 8px; font-weight: bold; font-size: 14px; color: #1b5e20; border: 1px solid #c8e6c9; text-decoration: none; display: block; }}
             .match-status {{ font-size: 10px; color: #d32f2f; margin-top: 2px; text-transform: uppercase; font-weight: bold; }}
-            .no-match {{ text-align: center; padding: 40px 20px; color: #6c757d; font-weight: 500; background: white; border-radius: 8px; margin-top: 20px; }}
+            .no-match {{ text-align: center; padding: 40px 20px; color: #6c757d; font-weight: 500; background: white; border-radius: 10px; margin-top: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.03); }}
         </style>
     </head>
     <body>
