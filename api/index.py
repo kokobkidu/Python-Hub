@@ -27,7 +27,7 @@ def home():
             for ev in events:
                 m_id = ev.get('id', '')
                 comp_name = ev.get('season', {}).get('slug', 'Football League').upper()
-                competitions = ev.get('competitions', [])
+                competitions = ev.get('competing', []) or ev.get('competitions', [])
                 for comp in competitions:
                     competitors = comp.get('competitors', [])
                     home_team, away_team, h_score, a_score = "Home", "Away", "-", "-"
@@ -53,12 +53,22 @@ def home():
                     elif status_type == 'STATUS_FINAL':
                         status_detail = "FT"
                     
-                    # ተጨማሪ መረጃዎችን (Summary / Details) ከኤፒአዩ ማውጣት
-                    details_text = "Match summary data is currently updating from the server."
-                    match_details = comp.get('details', [])
-                    if match_details:
-                        details_text = "<br>".join([d.get('description', '') for d in match_details if d.get('description')])
-                    
+                    # እውነተኛ የጨዋታ ዝርዝር መረጃዎችን (Summary/Events) ለማምጣት የተለየ ጥያቄ ማድረግ ይቻላል
+                    match_events = []
+                    summary_url = f"https://site.api.espn.com/apis/site/v2/sports/soccer/all/summary?event={m_id}"
+                    try:
+                        sum_resp = requests.get(summary_url, timeout=3)
+                        if sum_resp.status_code == 200:
+                            sum_data = sum_resp.iter_content if hasattr(sum_resp, 'iter_content') else None
+                            # ከሰርቨሩ የሚመጡ ትክክለኛ ክስተቶችን (Goals, Cards, etc.) መቃኘት
+                            plays = sum_data or sum_resp.json().get('keyEvents', [])
+                            for play in plays:
+                                text = play.get('text')
+                                if text:
+                                    match_events.append(text)
+                    except:
+                        pass
+
                     matches.append({
                         "id": m_id,
                         "league": comp_name,
@@ -67,7 +77,7 @@ def home():
                         "h": h_score,
                         "a": a_score,
                         "status": status_detail,
-                        "details": details_text
+                        "events": match_events
                     })
     except Exception as e:
         print("API Error:", e)
@@ -75,19 +85,22 @@ def home():
     if match_id:
         selected_match = next((m for m in matches if m['id'] == match_id), None)
         if selected_match:
-            return render_template_string("""
+            events_html = "".join([f"<li>{ev}</li>" for ev in selected_match['events']]) if selected_match['events'] else "<li>No official match events recorded for this game.</li>"
+            return render_template_string(f"""
             <!DOCTYPE html>
             <html>
             <head>
                 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <title>Match Details</title>
                 <style>
-                    body { font-family: sans-serif; background: #f0f2f5; margin: 0; padding: 0; }
-                    .top-bar { background: #1b5e20; color: white; padding: 14px; text-align: center; font-size: 18px; font-weight: bold; }
-                    .back-btn { display: inline-block; margin: 15px; color: #1b5e20; text-decoration: none; font-weight: bold; }
-                    .container { padding: 15px; max-width: 600px; margin: auto; background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-                    .score-header { text-align: center; font-size: 20px; font-weight: bold; color: #1b5e20; margin: 20px 0; background: #e8f5e9; padding: 15px; border-radius: 6px; }
-                    .match-events { margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 6px; font-size: 14px; color: #333; line-height: 1.6; }
+                    body {{ font-family: sans-serif; background: #f0f2f5; margin: 0; padding: 0; }}
+                    .top-bar {{ background: #1b5e20; color: white; padding: 14px; text-align: center; font-size: 18px; font-weight: bold; }}
+                    .back-btn {{ display: inline-block; margin: 15px; color: #1b5e20; text-decoration: none; font-weight: bold; }}
+                    .container {{ padding: 15px; max-width: 600px; margin: auto; background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }}
+                    .score-header {{ text-align: center; font-size: 20px; font-weight: bold; color: #1b5e20; margin: 20px 0; background: #e8f5e9; padding: 15px; border-radius: 6px; }}
+                    .events-box {{ margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 6px; font-size: 14px; color: #333; }}
+                    .events-box ul {{ padding-left: 20px; margin: 0; }}
+                    .events-box li {{ margin-bottom: 8px; }}
                 </style>
             </head>
             <body>
@@ -99,9 +112,11 @@ def home():
                         {{ match.home }} {{ match.h }} - {{ match.a }} {{ match.away }}
                         <div style="font-size: 12px; color: #d32f2f; margin-top: 5px;">Status: {{ match.status }}</div>
                     </div>
-                    <div class="match-events">
-                        <strong>Match Events / Timeline:</strong><br>
-                        {{ match.details | safe }}
+                    <div class="events-box">
+                        <strong>Official Match Timeline:</strong>
+                        <ul>
+                            {events_html}
+                        </ul>
                     </div>
                 </div>
             </body>
