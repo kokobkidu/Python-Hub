@@ -20,7 +20,6 @@ def home():
     
     matches = []
     try:
-        # ESPN Scoreboard API for soccer
         live_api_url = f"https://site.api.espn.com/apis/site/v2/sports/soccer/all/scoreboard?dates={selected_date.replace('-', '')}"
         response = requests.get(live_api_url, timeout=5)
         if response.status_code == 200:
@@ -28,15 +27,27 @@ def home():
             events = data.get('events', [])
             for ev in events:
                 m_id = ev.get('id', '')
-                # Try to get tournament or league name
-                comp_name = "FOOTBALL LEAGUE"
-                leagues = ev.get('competitions', [{}])[0].get('tournament', {})
-                if leagues and leagues.get('name'):
-                    comp_name = leagues.get('name')
-                else:
-                    comp_name = ev.get('season', {}.get('slug', 'International / League'))
                 
-                comp_name = str(comp_name).upper()
+                # የሊግ ወይም የውድድር ስሙን በንጹህ ጽሁፍ ለማምጣት
+                comp_name = "FOOTBALL LEAGUE"
+                try:
+                    competition_data = ev.get('competitions', [])[0]
+                    if 'tournament' in competition_data and competition_data['tournament'].get('name'):
+                        comp_name = competition_data['tournament']['name']
+                    elif 'season' in ev and isinstance(ev['season'], dict) and ev['season'].get('slug'):
+                        comp_name = str(ev['season']['slug']).replace('-', ' ')
+                    elif 'name' in competition_data:
+                        comp_name = competition_data.get('name')
+                    else:
+                        comp_name = ev.get('name', 'Football League')
+                except:
+                    comp_name = "Football League"
+                
+                # ዲክሽነሪ ሆኖ እንዳይወጣ ማረጋገጫ
+                if not isinstance(comp_name, str):
+                    comp_name = "Football League"
+                
+                comp_name = comp_name.upper()
 
                 competitions = ev.get('competitions', [])
                 for comp in competitions:
@@ -171,7 +182,7 @@ def home():
             </div>
             """
     else:
-        html_content += f'<div class="no-match">No matches found for ({selected_date}). Please try another date or check back later.</div>'
+        html_content += f'<div class="no-match">No matches found for ({selected_date}). Please try another date.</div>'
         
     html_content += """
         </div>
