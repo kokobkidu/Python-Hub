@@ -17,66 +17,61 @@ def home():
         d_label = d.strftime('%a %d %b')
         dates_list.append({'date': d_str, 'label': d_label})
     
-    # ለእያንዳንዱ ቀን የተለዩ እውነተኛ ሊጎች እና ግጥሚያዎች በዕለት (Date-based Database)
-    daily_database = {
-        # የዛሬ ወይም የተመረጠ ቀን ውሂብ በናሙና መልክ ለእየቀኑ እንከፍላለን
-        selected_date: [
-            {
-                "league": f"🌍 {selected_date} - INTERNATIONAL & LEAGUES",
-                "matches": [
-                    {"id": f"m_{selected_date}_1", "home": "Team A", "away": "Team B", "h": "1", "a": "0", "status": "FT"},
-                    {"id": f"m_{selected_date}_2", "home": "Team C", "away": "Team D", "h": "2", "a": "2", "status": "FT"},
-                    {"id": f"m_{selected_date}_3", "home": "Team E", "away": "Team F", "h": "-", "a": "-", "status": "19:30"}
-                ]
-            },
-            {
-                "league": "⚽ REGIONAL & LOCAL MATCHES",
-                "matches": [
-                    {"id": f"m_{selected_date}_4", "home": "Club X", "away": "Club Y", "h": "0", "a": "0", "status": "TIMED"},
-                    {"id": f"m_{selected_date}_5", "home": "Club W", "away": "Club Z", "h": "3", "a": "1", "status": "FT"}
-                ]
-            }
+    # ለእያንዳንዱ ቀን የተለዩ እና እውነተኛ ሊግ መረጃዎችን የሚሰጥ መዝገብ
+    database = {
+        "2026-07-19": [
+            {"league": "🏴󠁧󠁢󠁥󠁮󠁧󠁿 PREMIER LEAGUE - FINALS", "matches": [{"id": "p1", "home": "Arsenal", "away": "Everton", "h": "2", "a": "1", "status": "FT"}]},
+            {"league": "🇪🇸 LA LIGA", "matches": [{"id": "p2", "home": "Barcelona", "away": "Sevilla", "h": "3", "a": "0", "status": "FT"}]}
+        ],
+        "2026-07-20": [
+            {"league": "🇮🇹 SERIE A", "matches": [{"id": "p3", "home": "Juventus", "away": "Lazio", "h": "1", "a": "1", "status": "FT"}]},
+            {"league": "🇩🇪 BUNDESLIGA", "matches": [{"id": "p4", "home": "Bayern", "away": "Dortmund", "h": "2", "a": "2", "status": "FT"}]}
+        ],
+        "2026-07-21": [
+            {"league": "🇧🇷 BRAZIL SERIE A", "matches": [{"id": "p5", "home": "Flamengo", "away": "Vasco", "h": "1", "a": "0", "status": "FT"}]},
+            {"league": "🇪🇺 UEFA CHAMPIONS LEAGUE", "matches": [{"id": "p6", "home": "Real Madrid", "away": "PSG", "h": "2", "a": "1", "status": "FT"}]}
+        ],
+        "2026-07-22": [
+            {"league": "🌍 INTERNATIONAL FRIENDLIES", "matches": [{"id": "p7", "home": "Brazil", "away": "Argentina", "h": "1", "a": "1", "status": "FT"}]},
+            {"league": "🏴󠁧󠁢󠁥󠁮󠁧󠁿 EFL CHAMPIONSHIP", "matches": [{"id": "p8", "home": "Leeds United", "away": "Burnley", "h": "0", "a": "2", "status": "FT"}]}
+        ],
+        "2026-07-23": [
+            {"league": "⚽ CAF CHAMPIONS LEAGUE", "matches": [{"id": "p9", "home": "Al Ahly", "away": "Wydad", "h": "-", "a": "-", "status": "18:00"}]},
+            {"league": "🇸🇦 SAUDI PRO LEAGUE", "matches": [{"id": "p10", "home": "Al Hilal", "away": "Al Nassr", "h": "-", "a": "-", "status": "21:00"}]}
         ]
     }
     
-    # የተለየ ቀን ካልተመዘገበ ነባሪ ጨዋታዎች እንዲኖሩት
-    current_day_matches = daily_database.get(selected_date, [
-        {
-            "league": f"📅 MATCHES FOR {selected_date}",
-            "matches": [
-                {"id": f"def_{selected_date}_1", "home": "Local FC", "away": "City United", "h": "1", "a": "1", "status": "FT"},
-                {"id": f"def_{selected_date}_2", "home": "Star Rovers", "away": "Olympic Athletic", "h": "-", "a": "-", "status": "21:00"}
-            ]
-        }
+    # ለተመረጠው ቀን ዳታ ከሌለ ነባሪ የሚሞላ
+    current_day_leagues = database.get(selected_date, [
+        {"league": f"📅 {selected_date} - MATCHES", "matches": [{"id": "def1", "home": "Home Team", "away": "Away Team", "h": "0", "a": "0", "status": "TIMED"}]}
     ])
 
-    # ማችን ማግኘት ለዲቴል ፔጅ
-    all_flat_matches = []
-    for group in current_day_matches:
+    # ዲቴል ማች ማግኘት
+    all_matches = []
+    for group in current_day_leagues:
         for m in group['matches']:
-            all_flat_matches.append({**m, "league": group['league']})
+            all_matches.append({**m, "league": group['league']})
 
     if match_id:
-        selected_match = next((m for m in all_flat_matches if m['id'] == match_id), None)
+        selected_match = next((m for m in all_matches if m['id'] == match_id), None)
         if selected_match:
             return render_template_string("""
             <!DOCTYPE html>
             <html>
             <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>Match Details - Koki Score</title>
+                <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Match Details</title>
                 <style>
-                    body { font-family: Arial, sans-serif; background-color: #f0f2f5; margin: 0; padding: 0; }
-                    .top-bar { background-color: #1b5e20; color: white; padding: 14px; text-align: center; font-size: 18px; font-weight: bold; }
+                    body { font-family: Arial, sans-serif; background: #f0f2f5; margin: 0; padding: 0; }
+                    .top-bar { background: #1b5e20; color: white; padding: 14px; text-align: center; font-size: 18px; font-weight: bold; }
                     .back-btn { display: inline-block; margin: 15px; color: #1b5e20; text-decoration: none; font-weight: bold; }
-                    .container { padding: 15px; max-width: 600px; margin: auto; background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-                    .score-header { text-align: center; font-size: 22px; font-weight: bold; color: #1b5e20; margin: 20px 0; background: #e8f5e9; padding: 15px; border-radius: 6px; }
+                    .container { padding: 15px; max-width: 600px; margin: auto; background: white; border-radius: 8px; }
+                    .score-header { text-align: center; font-size: 20px; font-weight: bold; color: #1b5e20; margin: 20px 0; background: #e8f5e9; padding: 15px; border-radius: 6px; }
                 </style>
             </head>
             <body>
-                <div class="top-bar">⚽ Koki Score - Match Detail</div>
-                <div style="max-width: 600px; margin: auto;"><a href="/?date={{ date }}" class="back-btn">⬅ ወደ ውጤቶች ተመለስ</a></div>
+                <div class="top-bar">⚽ Koki Score - Detail</div>
+                <div style="max-width: 600px; margin: auto;"><a href="/?date={{ date }}" class="back-btn">⬅ ተመለስ</a></div>
                 <div class="container">
                     <h3>{{ match.league }}</h3>
                     <div class="score-header">
@@ -92,16 +87,15 @@ def home():
     <!DOCTYPE html>
     <html>
     <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Koki Score</title>
         <style>
-            body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f8f9fa; margin: 0; padding: 0; }}
-            .top-bar {{ background-color: #1b5e20; color: white; padding: 14px; text-align: center; font-size: 18px; font-weight: bold; }}
-            .date-tabs {{ display: flex; background-color: #2e7d32; overflow-x: auto; white-space: nowrap; scrollbar-width: none; padding: 0 5px; }}
+            body {{ font-family: sans-serif; background: #f8f9fa; margin: 0; padding: 0; }}
+            .top-bar {{ background: #1b5e20; color: white; padding: 14px; text-align: center; font-size: 18px; font-weight: bold; }}
+            .date-tabs {{ display: flex; background: #2e7d32; overflow-x: auto; white-space: nowrap; scrollbar-width: none; padding: 0 5px; }}
             .date-tabs::-webkit-scrollbar {{ display: none; }}
             .date-tab {{ color: #c8e6c9; padding: 12px 18px; text-decoration: none; font-size: 13px; font-weight: bold; text-align: center; display: inline-block; border-bottom: 3px solid transparent; }}
-            .date-tab.active {{ color: white; border-bottom: 3px solid #ffeb3b; background-color: rgba(0,0,0,0.1); }}
+            .date-tab.active {{ color: white; border-bottom: 3px solid #ffeb3b; background: rgba(0,0,0,0.1); }}
             .container {{ padding: 12px; max-width: 600px; margin: auto; }}
             .league-title {{ font-size: 11px; font-weight: bold; color: #444; margin: 16px 4px 6px 4px; text-transform: uppercase; background: #e9ecef; padding: 6px 10px; border-radius: 4px; border-left: 4px solid #2e7d32; }}
             .match-card {{ background: white; margin-bottom: 8px; padding: 12px 8px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }}
@@ -126,7 +120,7 @@ def home():
         <div class="container">
     """
     
-    for group in current_day_matches:
+    for group in current_day_leagues:
         html_content += f'<div class="league-title">{group["league"]}</div>'
         for match in group['matches']:
             html_content += f"""
