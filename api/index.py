@@ -1,3 +1,4 @@
+
 from flask import Flask, render_template_string, request
 from datetime import datetime, timedelta
 import requests
@@ -38,15 +39,17 @@ def home():
                             a_score = team.get('score', '-')
                     
                     status_type = comp.get('status', {}).get('type', {}).get('name', '')
-                    short_detail = comp.get('status', {}).get('type', {}).get('shortDetail', 'TIMED')
+                    status_detail = comp.get('status', {}).get('type', {}).get('shortDetail', 'TIMED')
                     
-                    # ጨዋታው ገና ያልጀመረ ከሆነ ሰዓቱን ከእውነተኛው የኤፒአይ መረጃ (date/time) ማምጣት
-                    if status_type == 'STATUS_SCHEDULED':
+                    # ጨዋታው በቀጥታ በሂደት ላይ ከሆነ (LIVE) ደቂቃውን ማሳየት
+                    if status_type == 'STATUS_IN_PROGRESS':
+                        clock = comp.get('status', {}).get('displayClock', '')
+                        status_detail = f"{clock}' LIVE" if clock else "LIVE"
+                    elif status_type == 'STATUS_SCHEDULED':
                         match_date_str = ev.get('date', '')
                         if match_date_str:
                             dt_obj = datetime.strptime(match_date_str, "%Y-%m-%dT%H:%MZ")
-                            # Local time formatting if needed, or shortDetail
-                            short_detail = dt_obj.strftime('%H:%M')
+                            status_detail = dt_obj.strftime('%H:%M')
                     
                     matches.append({
                         "league": comp_name,
@@ -54,7 +57,7 @@ def home():
                         "away": away_team,
                         "h": h_score,
                         "a": a_score,
-                        "status": short_detail
+                        "status": status_detail
                     })
     except Exception as e:
         print("API Error:", e)
