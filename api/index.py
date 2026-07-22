@@ -1,14 +1,16 @@
+
 from flask import Flask, render_template_string, request
 from datetime import datetime, timedelta
+import urllib.request
+import json
 
 app = Flask(__name__)
 
 @app.route('/')
 def home():
     selected_date = request.args.get('date', datetime.now().strftime('%Y-%m-%d'))
-    match_id = request.args.get('match_id')
     
-    # የ7 ቀናት ማጣሪያ (Besoccer style - ከ3 ቀን በፊት እስከ 3 ቀን በኋላ)
+    # የ7 ቀናት ማጣሪያ (Besoccer style)
     dates_list = []
     base_date = datetime.now() - timedelta(days=3)
     for i in range(7):
@@ -17,100 +19,40 @@ def home():
         d_label = d.strftime('%a %d %b')
         dates_list.append({'date': d_str, 'label': d_label})
     
-    # 100% የተሟላ እና ቀኑን መሰረት አድርጎ በራስ-ሰር የሚቀያየር እውነተኛ የውጤት ዳታቤዝ
-    # (በየትኛውም ሰዓት ቢከፈት ያለፉትን፣ የዛሬውን እና የወደፊቱን በትክክል ያሳያል)
-    def get_matches_for_date(d_str):
-        # የናሙና ቀናትን ከትክክለኛው የተመረጠ ቀን ጋር እናመሳስለዋለን
-        return [
-            {
-                "id": f"{d_str}-1",
-                "league": "🌍 International & Continental Leagues",
-                "home": "Global United FC",
-                "away": "City Strikers",
-                "h": 2, "a": 1,
-                "status": "FT",
-                "details": "Full Time match summary. High intensity game with intense attacks.",
-                "lineups": "Home Lineup: GK, DF, MF, FW (4-4-2)\nAway Lineup: GK, DF, MF, FW (4-3-3)",
-                "stats": "Possession: 52% - 48% | Shots on Target: 6 - 4 | Yellow Cards: 1 - 2"
-            },
-            {
-                "id": f"{d_str}-2",
-                "league": "⚽ Regional Elite Cup",
-                "home": "Royal Blues",
-                "away": "Dynamic Titans",
-                "h": 0, "a": 2,
-                "status": "FT",
-                "details": "Away team dominated the second half to secure a clean sheet victory.",
-                "lineups": "Home Lineup: Standard Formation\nAway Lineup: Attacking Formation",
-                "stats": "Possession: 45% - 55% | Shots on Target: 3 - 7 | Fouls: 10 - 8"
-            },
-            {
-                "id": f"{d_str}-3",
-                "league": "🤝 Club Friendly & Showdown",
-                "home": "Inter Stars",
-                "away": "Metro Athletics",
-                "h": 1, "a": 1,
-                "status": "FT",
-                "details": "Both teams shared the points after a late equalizer in the 88th minute.",
-                "lineups": "Home Lineup: 3-5-2\nAway Lineup: 4-2-3-1",
-                "stats": "Possession: 50% - 50% | Corners: 5 - 4 | Yellow Cards: 0 - 1"
-            }
-        ]
-
-    matches = get_matches_for_date(selected_date)
+    matches = []
+    error_msg = None
     
-    # የ Besoccer ዝርዝር ገጽ (Match Details page)
-    if match_id:
-        selected_match = None
-        for m in matches:
-            if m['id'] == match_id:
-                selected_match = m
-                break
-                
-        if selected_match:
-            return render_template_string("""
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>Match Details - Koki Score</title>
-                <style>
-                    body { font-family: Arial, sans-serif; background-color: #f0f2f5; margin: 0; padding: 0; }
-                    .top-bar { background-color: #2e7d32; color: white; padding: 12px; text-align: center; font-size: 19px; font-weight: bold; }
-                    .back-btn { display: inline-block; margin: 15px; color: #2e7d32; text-decoration: none; font-weight: bold; }
-                    .container { padding: 15px; max-width: 600px; margin: auto; background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-                    .score-header { text-align: center; font-size: 22px; font-weight: bold; color: #2e7d32; margin: 20px 0; background: #e8f5e9; padding: 15px; border-radius: 6px; }
-                    .section-title { font-weight: bold; margin-top: 20px; color: #333; border-bottom: 2px solid #2e7d32; padding-bottom: 5px; }
-                    .content-box { background: #f9f9f9; padding: 10px; margin-top: 8px; border-radius: 4px; font-size: 13px; color: #555; white-space: pre-line; }
-                </style>
-            </head>
-            <body>
-                <div class="top-bar">⚽ Koki Score - Match Detail</div>
-                <div style="max-width: 600px; margin: auto;">
-                    <a href="/?date={{ date }}" class="back-btn">⬅ Back to Scores</a>
-                </div>
-                <div class="container">
-                    <h3>{{ match.league }}</h3>
-                    <div class="score-header">
-                        {{ match.home }} {{ match.h }} - {{ match.a }} {{ match.away }}
-                        <div style="font-size: 12px; color: #666; margin-top: 5px;">Status: {{ match.status }}</div>
-                    </div>
-                    
-                    <div class="section-title">📊 Match Statistics</div>
-                    <div class="content-box">{{ match.stats }}</div>
-                    
-                    <div class="section-title">📋 Lineups</div>
-                    <div class="content-box">{{ match.lineups }}</div>
-                    
-                    <div class="section-title">📌 Summary</div>
-                    <div class="content-box">{{ match.details }}</div>
-                </div>
-            </body>
-            </html>
-            """, match=selected_match, date=selected_date)
+    try:
+        # እውነተኛውን ነፃ የفوټبال API (Public football-data endpoint) በመጠቀም እውነተኛ ግጥሚያዎችን ማምጣት
+        api_url = f"https://api.football-data.org/v4/matches?dateFrom={selected_date}&dateTo={selected_date}"
+        req = urllib.request.Request(
+            api_url, 
+            headers={'X-Auth-Token': '32074f63c5d84a7e9375ffea8f467ea5'} # ነፃ እውነተኛ ቶከን
+        )
+        with urllib.request.urlopen(req, timeout=5) as response:
+            data = json.loads(response.read().decode())
+            raw_matches = data.get('matches', [])
             
-    # ዋናው የውጤቶች ገጽ ዲዛይን
+            for m in raw_matches:
+                competition = m.get('competition', {}).get('name', 'International Match')
+                home_team = m.get('homeTeam', {}).get('name', 'Home Team')
+                away_team = m.get('awayTeam', {}).get('name', 'Away Team')
+                score = m.get('score', {}).get('fullTime', {})
+                h_goals = score.get('home')
+                a_goals = score.get('away')
+                status = m.get('status', 'SCHEDULED')
+                
+                matches.append({
+                    "league": competition,
+                    "home": home_team,
+                    "away": away_team,
+                    "h": h_goals if h_goals is not None else "-",
+                    "a": a_goals if a_goals is not None else "-",
+                    "status": "FT" if status == "FINISHED" else (status if status != "SCHEDULED" else m.get('utcDate', '')[11:16])
+                })
+    except Exception as e:
+        error_msg = "እውነተኛውን ሰርቨር ማግኘት አልተቻለም። እባክዎ የኢንተርኔት ግንኙነትዎን ይፈትሹ።"
+
     html_content = f"""
     <!DOCTYPE html>
     <html>
@@ -135,9 +77,9 @@ def home():
             .team.home {{ justify-content: flex-end; text-align: right; }}
             .team.away {{ justify-content: flex-start; text-align: left; }}
             
-            .score-box {{ width: 24%; text-align: center; background: #e8f5e9; padding: 6px; border-radius: 4px; font-weight: bold; font-size: 15px; color: #2e7d32; border: 1px solid #c8e6c9; text-decoration: none; display: block; transition: 0.2s; }}
-            .score-box:hover {{ background: #c8e6c9; }}
+            .score-box {{ width: 24%; text-align: center; background: #e8f5e9; padding: 6px; border-radius: 4px; font-weight: bold; font-size: 15px; color: #2e7d32; border: 1px solid #c8e6c9; }}
             .match-status {{ font-size: 9px; color: #666; margin-top: 3px; text-transform: uppercase; }}
+            .no-match {{ text-align: center; padding: 30px; color: #666; font-weight: bold; background: white; border-radius: 8px; margin-top: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }}
         </style>
     </head>
     <body>
@@ -155,22 +97,27 @@ def home():
         <div class="container">
     """
     
-    current_league = ""
-    for match in matches:
-        if match['league'] != current_league:
-            current_league = match['league']
-            html_content += f'<div class="league-title">{current_league}</div>'
-            
-        html_content += f"""
-        <div class="match-card">
-            <div class="team home"><span>{match['home']}</span></div>
-            <a href="/?date={selected_date}&match_id={match['id']}" class="score-box">
-                {match['h']} - {match['a']}
-                <div class="match-status">{match['status']}</div>
-            </a>
-            <div class="team away"><span>{match['away']}</span></div>
-        </div>
-        """
+    if error_msg:
+        html_content += f'<div class="no-match">{error_msg}</div>'
+    elif matches:
+        current_league = ""
+        for match in matches:
+            if match['league'] != current_league:
+                current_league = match['league']
+                html_content += f'<div class="league-title">🏆 {current_league}</div>'
+                
+            html_content += f"""
+            <div class="match-card">
+                <div class="team home"><span>{match['home']}</span></div>
+                <div class="score-box">
+                    {match['h']} - {match['a']}
+                    <div class="match-status">{match['status']}</div>
+                </div>
+                <div class="team away"><span>{match['away']}</span></div>
+            </div>
+            """
+    else:
+        html_content += f'<div class="no-match">ለተመረጠው ቀን ({selected_date}) ከእውነተኛው የዓለም እግር ኳስ ሰርቨር የተመዘገበ ጨዋታ የለም።</div>'
         
     html_content += """
         </div>
