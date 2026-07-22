@@ -8,7 +8,6 @@ app = Flask(__name__)
 def home():
     selected_date = request.args.get('date', datetime.now().strftime('%Y-%m-%d'))
     
-    # የሳምንቱን ቀናት ማዘጋጀት
     dates_list = []
     base_date = datetime.now() - timedelta(days=3)
     for i in range(7):
@@ -19,9 +18,7 @@ def home():
     
     matches = []
     try:
-        # እውነተኛ የሕዝብ የውጤት መጋቢ (Public ESPN API Feed)
         live_api_url = f"https://site.api.espn.com/apis/site/v2/sports/soccer/all/scoreboard?dates={selected_date.replace('-', '')}"
-        
         response = requests.get(live_api_url, timeout=5)
         if response.status_code == 200:
             data = response.json()
@@ -40,7 +37,16 @@ def home():
                             away_team = team.get('team', {}).get('displayName', 'Away')
                             a_score = team.get('score', '-')
                     
-                    status_detail = comp.get('status', {}).get('type', {}).get('shortDetail', 'TIMED')
+                    status_type = comp.get('status', {}).get('type', {}).get('name', '')
+                    short_detail = comp.get('status', {}).get('type', {}).get('shortDetail', 'TIMED')
+                    
+                    # ጨዋታው ገና ያልጀመረ ከሆነ ሰዓቱን ከእውነተኛው የኤፒአይ መረጃ (date/time) ማምጣት
+                    if status_type == 'STATUS_SCHEDULED':
+                        match_date_str = ev.get('date', '')
+                        if match_date_str:
+                            dt_obj = datetime.strptime(match_date_str, "%Y-%m-%dT%H:%MZ")
+                            # Local time formatting if needed, or shortDetail
+                            short_detail = dt_obj.strftime('%H:%M')
                     
                     matches.append({
                         "league": comp_name,
@@ -48,7 +54,7 @@ def home():
                         "away": away_team,
                         "h": h_score,
                         "a": a_score,
-                        "status": status_detail
+                        "status": short_detail
                     })
     except Exception as e:
         print("API Error:", e)
@@ -74,7 +80,7 @@ def home():
             .team.home {{ justify-content: flex-end; text-align: right; }}
             .team.away {{ justify-content: flex-start; text-align: left; }}
             .score-box {{ width: 24%; text-align: center; background: #f1f8e9; padding: 6px 4px; border-radius: 6px; font-weight: bold; font-size: 14px; color: #2e7d32; border: 1px solid #dcedc8; }}
-            .match-status {{ font-size: 9px; color: #d32f2f; margin-top: 2px; text-transform: uppercase; font-weight: bold; }}
+            .match-status {{ font-size: 10px; color: #d32f2f; margin-top: 2px; text-transform: uppercase; font-weight: bold; }}
             .no-match {{ text-align: center; padding: 40px 20px; color: #6c757d; font-weight: 500; background: white; border-radius: 8px; margin-top: 20px; }}
         </style>
     </head>
