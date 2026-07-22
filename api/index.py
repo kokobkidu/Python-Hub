@@ -28,7 +28,6 @@ def home():
             for ev in events:
                 m_id = ev.get('id', '')
                 
-                # የሊግ ወይም የውድድር ስሙን በንጹህ ጽሁፍ ለማምጣት
                 comp_name = "FOOTBALL LEAGUE"
                 try:
                     competition_data = ev.get('competitions', [])[0]
@@ -43,7 +42,6 @@ def home():
                 except:
                     comp_name = "Football League"
                 
-                # ዲክሽነሪ ሆኖ እንዳይወጣ ማረጋገጫ
                 if not isinstance(comp_name, str):
                     comp_name = "Football League"
                 
@@ -68,10 +66,13 @@ def home():
                         clock = comp.get('status', {}).get('displayClock', '')
                         status_detail = f"{clock}' LIVE" if clock else "LIVE"
                     elif status_type == 'STATUS_SCHEDULED':
+                        h_score = "-"
+                        a_score = "-"
                         match_date_str = ev.get('date', '')
                         if match_date_str:
                             try:
                                 dt_obj = datetime.strptime(match_date_str, "%Y-%m-%dT%H:%MZ")
+                                dt_obj = dt_obj + timedelta(hours=3)
                                 status_detail = dt_obj.strftime('%H:%M')
                             except:
                                 pass
@@ -92,38 +93,92 @@ def home():
 
     if match_id:
         selected_match = next((m for m in matches if m['id'] == match_id), None)
+        
+        # ተጨማሪ የጎል ሰሪዎችን እና ስታቲስቲክስ ከኢኤስፒኤን የጨዋታ ዲቴል ኤፒአይ ለማምጣት
+        match_details = {"events_list": [], "statistics": []}
+        try:
+            detail_url = f"https://site.api.espn.com/apis/site/v2/sports/soccer/all/summary?event={match_id}"
+            det_res = requests.get(detail_url, timeout=5)
+            if det_res.status_code == 200:
+                det_data = det_res.json()
+                
+                # የጎል ሰሪዎች እና ካርዶች (Goals & Events)
+                details_array = det_data.get('details', [])
+                for item in details_array:
+                    text = item.get('text', '')
+                    clock = item.get('clock', {}).get('displayValue', '')
+                    team_obj = item.get('team', {}).get('displayName', '')
+                    match_details["events_list"].append({"text": text, "clock": clock, "team": team_obj})
+                
+                # የმატች ስታቲስቲክስ (Possession, Shots, etc.)
+                boxscore = det_data.get('boxscore', {}).get('teams', [])
+                for stats_team in boxscore:
+                    t_name = stats_team.get('team', {}).get('displayName', '')
+                    stats_list = stats_team.get('statistics', [])
+                    for st in stats_list:
+                        match_details["statistics"].append({
+                            "team": t_name,
+                            "label": st.get('label', ''),
+                            "value": st.get('displayValue', '')
+                        })
+        except Exception as err:
+            print("Detail API Error:", err)
+
         if selected_match:
             return render_template_string("""
             <!DOCTYPE html>
             <html>
             <head>
                 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>Match Details</title>
+                <title>Match Details & Stats</title>
                 <style>
                     body { font-family: sans-serif; background: #f0f2f5; margin: 0; padding: 0; }
                     .top-bar { background: #1b5e20; color: white; padding: 14px; text-align: center; font-size: 18px; font-weight: bold; }
                     .back-btn { display: inline-block; margin: 15px; color: #1b5e20; text-decoration: none; font-weight: bold; }
-                    .container { padding: 15px; max-width: 600px; margin: auto; background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-                    .score-header { text-align: center; font-size: 20px; font-weight: bold; color: #1b5e20; margin: 20px 0; background: #e8f5e9; padding: 15px; border-radius: 6px; }
-                    .info-text { text-align: center; color: #555; font-size: 14px; margin-top: 15px; background: #f8f9fa; padding: 10px; border-radius: 6px; }
+                    .container { padding: 15px; max-width: 600px; margin: auto; background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; }
+                    .score-header { text-align: center; font-size: 20px; font-weight: bold; color: #1b5e20; margin: 10px 0; background: #e8f5e9; padding: 15px; border-radius: 6px; }
+                    .section-title { font-size: 14px; font-weight: bold; color: #333; margin-top: 20px; margin-bottom: 10px; border-bottom: 2px solid #2e7d32; padding-bottom: 5px; text-transform: uppercase; }
+                    .event-item { font-size: 13px; color: #444; padding: 6px 0; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; }
+                    .stat-row { font-size: 13px; display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #f9f9f9; }
                 </style>
             </head>
             <body>
-                <div class="top-bar">⚽ Koki Score - Detail</div>
-                <div style="max-width: 600px; margin: auto;"><a href="/?date={{ date }}" class="back-btn">⬅ Back</a></div>
+                <div class="top-bar">⚽ Koki Score - Match Hub</div>
+                <div style="max-width: 600px; margin: auto;"><a href="/?date={{ date }}" class="back-btn">⬅ ወደ ዝርዝር ተመለስ</a></div>
                 <div class="container">
-                    <h3>{{ match.league }}</h3>
+                    <h3 style="text-align: center; color: #555; font-size: 13px;">{{ match.league }}</h3>
                     <div class="score-header">
                         {{ match.home }} {{ match.h }} - {{ match.a }} {{ match.away }}
-                        <div style="font-size: 12px; color: #d32f2f; margin-top: 5px;">Status: {{ match.status }}</div>
+                        <div style="font-size: 12px; color: #d32f2f; margin-top: 5px;">እንዳታ (Status): {{ match.status }}</div>
                     </div>
-                    <div class="info-text">
-                        Match Result: <b>{{ match.home }} {{ match.h }}</b> - <b>{{ match.away }} {{ match.a }}</b>
-                    </div>
+
+                    <div class="section-title">⚽ የጎል ሰሪዎች እና ዝርዝር ክስተቶች</div>
+                    {% if details.events_list %}
+                        {% for ev in details.events_list %}
+                            <div class="event-item">
+                                <span><b>{{ ev.clock }}'</b> - {{ ev.text }}</span>
+                                <span style="color: #666; font-size: 11px;">{{ ev.team }}</span>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <p style="font-size: 13px; color: #777; text-align: center;">ለዚህ ግጥሚያ የተመዘገበ ጎል ወይም ክስተት የለም።</p>
+                    {% endif %}
+
+                    <div class="section-title">📊 የሜዳ ላይ ስታቲስቲክስ</div>
+                    {% if details.statistics %}
+                        {% for st in details.statistics %}
+                            <div class="stat-row">
+                                <span><b>{{ st.team }}</b></span>
+                                <span>{{ st.label }}: <b>{{ st.value }}</b></span>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <p style="font-size: 13px; color: #777; text-align: center;">ስታቲስቲክስ አልተገኘም (ግጥሚያው ገና ሳይጀምር ሲቀር መረጃው ላይኖር ይችላል)</p>
+                    {% endif %}
                 </div>
             </body>
             </html>
-            """, match=selected_match, date=selected_date)
+            """, match=selected_match, date=selected_date, details=match_details)
 
     html_content = f"""
     <!DOCTYPE html>
