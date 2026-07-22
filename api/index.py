@@ -1,6 +1,7 @@
 from flask import Flask, render_template_string, request
 from datetime import datetime, timedelta
 import requests
+import os
 
 app = Flask(__name__)
 
@@ -19,6 +20,7 @@ def home():
     
     matches = []
     try:
+        # ESPN Scoreboard API for soccer
         live_api_url = f"https://site.api.espn.com/apis/site/v2/sports/soccer/all/scoreboard?dates={selected_date.replace('-', '')}"
         response = requests.get(live_api_url, timeout=5)
         if response.status_code == 200:
@@ -26,7 +28,16 @@ def home():
             events = data.get('events', [])
             for ev in events:
                 m_id = ev.get('id', '')
-                comp_name = ev.get('season', {}).get('slug', 'Football League').upper()
+                # Try to get tournament or league name
+                comp_name = "FOOTBALL LEAGUE"
+                leagues = ev.get('competitions', [{}])[0].get('tournament', {})
+                if leagues and leagues.get('name'):
+                    comp_name = leagues.get('name')
+                else:
+                    comp_name = ev.get('season', {}.get('slug', 'International / League'))
+                
+                comp_name = str(comp_name).upper()
+
                 competitions = ev.get('competitions', [])
                 for comp in competitions:
                     competitors = comp.get('competitors', [])
@@ -48,8 +59,11 @@ def home():
                     elif status_type == 'STATUS_SCHEDULED':
                         match_date_str = ev.get('date', '')
                         if match_date_str:
-                            dt_obj = datetime.strptime(match_date_str, "%Y-%m-%dT%H:%MZ")
-                            status_detail = dt_obj.strftime('%H:%M')
+                            try:
+                                dt_obj = datetime.strptime(match_date_str, "%Y-%m-%dT%H:%MZ")
+                                status_detail = dt_obj.strftime('%H:%M')
+                            except:
+                                pass
                     elif status_type == 'STATUS_FINAL':
                         status_detail = "FT"
                     
@@ -93,7 +107,7 @@ def home():
                         <div style="font-size: 12px; color: #d32f2f; margin-top: 5px;">Status: {{ match.status }}</div>
                     </div>
                     <div class="info-text">
-                        Official match result: <b>{{ match.home }} {{ match.h }}</b> and <b>{{ match.away }} {{ match.a }}</b>.
+                        Match Result: <b>{{ match.home }} {{ match.h }}</b> - <b>{{ match.away }} {{ match.a }}</b>
                     </div>
                 </div>
             </body>
@@ -157,7 +171,7 @@ def home():
             </div>
             """
     else:
-        html_content += f'<div class="no-match">No matches found for ({selected_date}).</div>'
+        html_content += f'<div class="no-match">No matches found for ({selected_date}). Please try another date or check back later.</div>'
         
     html_content += """
         </div>
@@ -167,4 +181,5 @@ def home():
     return html_content
 
 if __name__ == '__main__':
-    app.run()
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host='0.0.0.0', port=port)
