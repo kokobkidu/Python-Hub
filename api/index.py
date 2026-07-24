@@ -60,7 +60,6 @@ def home():
                 
                 comp_name = comp_name.upper()
 
-                # የተጠቃሚውን ምርጫ ሊጎች ማጣሪያ (ከዚህ ውጭ ያሉትን ትናንሽ/የውሸት ጨዋታዎች እንዘላለን)
                 is_valid_league = any(l in comp_name for l in ALLOWED_LEAGUES)
                 if not is_valid_league:
                     continue
@@ -278,7 +277,7 @@ def home():
                 
             html_content += f"""
             <div class="match-card">
-                <div class="team home"><span>{match['home']}</span>}</div>
+                <div class="team home"><span>{match['home']}</span></div>
                 <a href="/?date={selected_date}&match_id={match['id']}" class="score-box">
                     {match['h']} - {match['a']}
                     <div class="match-status">{match['status']}</div>
