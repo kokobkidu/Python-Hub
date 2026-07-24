@@ -5,13 +5,11 @@ import os
 
 app = Flask(__name__)
 
-# አንተ የመረጥካቸውን ሊጎች በቁልፍ ቃላት (Keywords) በማስፋት 
-# 1. ፕሪሚየር ሊግ (እንግሊዝ እና ኢትዮጵያ)
-# 2. ጣልያን ሴሪአ፣ ጀርመን ቡንደስሊጋ፣ ፈረንሳይ ሊግ 1፣ ላሊጋ ስፔን፣ ቻምፒዮንስ ሊግ፣ ቱርክ፣ ቤልጅየም እና ዓለም ዋንጫ
+# የተጠቃሚውን ዋና ዋና ሊጎች እና አሁን የሚደረጉትን ጨዋታዎች የሚያካትቱ ቁልፍ ቃላት
 ALLOWED_KEYWORDS = [
     "PREMIER LEAGUE", "ETHIOPIAN", "SERIE A", "BUNDESLIGA", 
     "LIGUE 1", "LALIGA", "LA LIGA", "CHAMPIONS LEAGUE", 
-    "SUPER LIG", "PRO LEAGUE", "WORLD CUP"
+    "SUPER LIG", "PRO LEAGUE", "WORLD CUP", "MLS", "ARGENTINA"
 ]
 
 @app.route('/')
@@ -56,7 +54,6 @@ def home():
                 
                 comp_name = comp_name.upper()
 
-                # የተጠቃሚውን የተመረጡ ሊጎች ቁልፍ ቃላት ማጣሪያ
                 is_valid_league = any(keyword in comp_name for keyword in ALLOWED_KEYWORDS)
                 if not is_valid_league:
                     continue
@@ -153,24 +150,24 @@ def home():
                 <title>{{ match.home }} vs {{ match.away }} - Koki Score</title>
                 <style>
                     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f6f9; margin: 0; padding: 0; }
-                    .top-bar { background: #1b5e20; color: white; padding: 14px; text-align: center; font-size: 18px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-                    .back-btn { display: inline-block; margin: 12px 15px; color: #1b5e20; text-decoration: none; font-weight: bold; font-size: 14px; }
+                    .top-bar { background: #0d47a1; color: white; padding: 14px; text-align: center; font-size: 18px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+                    .back-btn { display: inline-block; margin: 12px 15px; color: #0d47a1; text-decoration: none; font-weight: bold; font-size: 14px; }
                     .container { padding: 0 15px 20px 15px; max-width: 600px; margin: auto; }
                     .match-header-card { background: white; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); padding: 20px; text-align: center; margin-bottom: 15px; }
-                    .league-badge { font-size: 11px; font-weight: bold; color: #2e7d32; text-transform: uppercase; margin-bottom: 10px; background: #e8f5e9; display: inline-block; padding: 4px 10px; border-radius: 20px; }
+                    .league-badge { font-size: 11px; font-weight: bold; color: #1565c0; text-transform: uppercase; margin-bottom: 10px; background: #e3f2fd; display: inline-block; padding: 4px 10px; border-radius: 20px; }
                     .teams-score { display: flex; justify-content: space-between; align-items: center; font-size: 16px; font-weight: bold; color: #333; margin: 15px 0; }
                     .team-name { width: 38%; text-align: center; word-wrap: break-word; }
-                    .score-badge { background: #1b5e20; color: white; padding: 8px 16px; border-radius: 8px; font-size: 20px; font-weight: bold; }
+                    .score-badge { background: #0d47a1; color: white; padding: 8px 16px; border-radius: 8px; font-size: 20px; font-weight: bold; }
                     .status-badge { font-size: 11px; color: #d32f2f; text-transform: uppercase; font-weight: bold; margin-top: 8px; }
                     
                     .card-box { background: white; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); padding: 15px; margin-bottom: 15px; }
-                    .section-title { font-size: 13px; font-weight: bold; color: #555; margin-bottom: 15px; text-transform: uppercase; border-left: 4px solid #1b5e20; padding-left: 8px; }
+                    .section-title { font-size: 13px; font-weight: bold; color: #555; margin-bottom: 15px; text-transform: uppercase; border-left: 4px solid #0d47a1; padding-left: 8px; }
                     
                     .stat-row { margin-bottom: 12px; }
                     .stat-info { display: flex; justify-content: space-between; font-size: 12px; font-weight: bold; color: #333; margin-bottom: 4px; }
                     
                     .event-row { display: flex; align-items: center; font-size: 13px; padding: 8px 0; border-bottom: 1px solid #f1f1f1; color: #444; }
-                    .event-time { font-weight: bold; color: #1b5e20; width: 45px; }
+                    .event-time { font-weight: bold; color: #0d47a1; width: 45px; }
                     .no-data { text-align: center; color: #888; font-size: 13px; padding: 15px 0; }
                 </style>
             </head>
@@ -234,19 +231,19 @@ def home():
         <title>Koki Score</title>
         <style>
             body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f4f6f9; margin: 0; padding: 0; }}
-            .top-bar {{ background-color: #1b5e20; color: white; padding: 14px; text-align: center; font-size: 18px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
-            .date-tabs {{ display: flex; background-color: #2e7d32; overflow-x: auto; white-space: nowrap; scrollbar-width: none; padding: 0 5px; }}
+            .top-bar {{ background-color: #0d47a1; color: white; padding: 14px; text-align: center; font-size: 18px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
+            .date-tabs {{ display: flex; background-color: #1565c0; overflow-x: auto; white-space: nowrap; scrollbar-width: none; padding: 0 5px; }}
             .date-tabs::-webkit-scrollbar {{ display: none; }}
-            .date-tab {{ color: #c8e6c9; padding: 12px 18px; text-decoration: none; font-size: 13px; font-weight: bold; text-align: center; display: inline-block; border-bottom: 3px solid transparent; }}
+            .date-tab {{ color: #bbdefb; padding: 12px 18px; text-decoration: none; font-size: 13px; font-weight: bold; text-align: center; display: inline-block; border-bottom: 3px solid transparent; }}
             .date-tab.active {{ color: white; border-bottom: 3px solid #ffeb3b; background-color: rgba(0,0,0,0.1); }}
             .container {{ padding: 12px; max-width: 600px; margin: auto; }}
-            .league-title {{ font-size: 11px; font-weight: bold; color: #444; margin: 16px 4px 6px 4px; text-transform: uppercase; background: #e9ecef; padding: 6px 10px; border-radius: 6px; border-left: 4px solid #2e7d32; }}
+            .league-title {{ font-size: 11px; font-weight: bold; color: #444; margin: 16px 4px 6px 4px; text-transform: uppercase; background: #e9ecef; padding: 6px 10px; border-radius: 6px; border-left: 4px solid #1565c0; }}
             .match-card {{ background: white; margin-bottom: 8px; padding: 14px 10px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.03); display: flex; justify-content: space-between; align-items: center; transition: transform 0.1s; }}
             .match-card:active {{ transform: scale(0.98); }}
             .team {{ width: 38%; font-weight: 600; font-size: 13px; color: #212529; display: flex; align-items: center; }}
             .team.home {{ justify-content: flex-end; text-align: right; }}
             .team.away {{ justify-content: flex-start; text-align: left; }}
-            .score-box {{ width: 26%; text-align: center; background: #e8f5e9; padding: 6px 4px; border-radius: 8px; font-weight: bold; font-size: 14px; color: #1b5e20; border: 1px solid #c8e6c9; text-decoration: none; display: block; }}
+            .score-box {{ width: 26%; text-align: center; background: #e3f2fd; padding: 6px 4px; border-radius: 8px; font-weight: bold; font-size: 14px; color: #0d47a1; border: 1px solid #bbdefb; text-decoration: none; display: block; }}
             .match-status {{ font-size: 10px; color: #d32f2f; margin-top: 2px; text-transform: uppercase; font-weight: bold; }}
             .no-match {{ text-align: center; padding: 40px 20px; color: #6c757d; font-weight: 500; background: white; border-radius: 10px; margin-top: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.03); }}
         </style>
@@ -283,7 +280,7 @@ def home():
             </div>
             """
     else:
-        html_content += f'<div class="no-match">No matches found for your selected leagues on ({selected_date}). (Note: Major leagues might be in off-season).</div>'
+        html_content += f'<div class="no-match">No active matches found for ({selected_date}).</div>'
         
     html_content += """
         </div>
