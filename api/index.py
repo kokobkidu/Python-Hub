@@ -5,17 +5,13 @@ import os
 
 app = Flask(__name__)
 
-# ተጠቃሚው የመረጣቸው ዋና ዋና ተፈላጊ ሊጎች ዝርዝር
-ALLOWED_LEAGUES = [
-    "ENGLISH PREMIER LEAGUE",
-    "SPANISH LIGA",
-    "ITALIAN SERIE A",
-    "GERMAN BUNDESLIGA",
-    "FRENCH LIGUE 1",
-    "UEFA CHAMPIONS LEAGUE",
-    "TURKISH SUPER LIG",
-    "BELGIAN PRO LEAGUE",
-    "FIFA WORLD CUP"
+# አንተ የመረጥካቸውን ሊጎች በቁልፍ ቃላት (Keywords) በማስፋት 
+# 1. ፕሪሚየር ሊግ (እንግሊዝ እና ኢትዮጵያ)
+# 2. ጣልያን ሴሪአ፣ ጀርመን ቡንደስሊጋ፣ ፈረንሳይ ሊግ 1፣ ላሊጋ ስፔን፣ ቻምፒዮንስ ሊግ፣ ቱርክ፣ ቤልጅየም እና ዓለም ዋንጫ
+ALLOWED_KEYWORDS = [
+    "PREMIER LEAGUE", "ETHIOPIAN", "SERIE A", "BUNDESLIGA", 
+    "LIGUE 1", "LALIGA", "LA LIGA", "CHAMPIONS LEAGUE", 
+    "SUPER LIG", "PRO LEAGUE", "WORLD CUP"
 ]
 
 @app.route('/')
@@ -60,7 +56,8 @@ def home():
                 
                 comp_name = comp_name.upper()
 
-                is_valid_league = any(l in comp_name for l in ALLOWED_LEAGUES)
+                # የተጠቃሚውን የተመረጡ ሊጎች ቁልፍ ቃላት ማጣሪያ
+                is_valid_league = any(keyword in comp_name for keyword in ALLOWED_KEYWORDS)
                 if not is_valid_league:
                     continue
 
@@ -286,7 +283,7 @@ def home():
             </div>
             """
     else:
-        html_content += f'<div class="no-match">No major league matches found for ({selected_date}).</div>'
+        html_content += f'<div class="no-match">No matches found for your selected leagues on ({selected_date}). (Note: Major leagues might be in off-season).</div>'
         
     html_content += """
         </div>
