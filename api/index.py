@@ -5,6 +5,19 @@ import os
 
 app = Flask(__name__)
 
+# ተጠቃሚው የመረጣቸው ዋና ዋና ተፈላጊ ሊጎች ዝርዝር
+ALLOWED_LEAGUES = [
+    "ENGLISH PREMIER LEAGUE",
+    "SPANISH LIGA",
+    "ITALIAN SERIE A",
+    "GERMAN BUNDESLIGA",
+    "FRENCH LIGUE 1",
+    "UEFA CHAMPIONS LEAGUE",
+    "TURKISH SUPER LIG",
+    "BELGIAN PRO LEAGUE",
+    "FIFA WORLD CUP"
+]
+
 @app.route('/')
 def home():
     selected_date = request.args.get('date', datetime.now().strftime('%Y-%m-%d'))
@@ -47,6 +60,11 @@ def home():
                 
                 comp_name = comp_name.upper()
 
+                # የተጠቃሚውን ምርጫ ሊጎች ማጣሪያ (ከዚህ ውጭ ያሉትን ትናንሽ/የውሸት ጨዋታዎች እንዘላለን)
+                is_valid_league = any(l in comp_name for l in ALLOWED_LEAGUES)
+                if not is_valid_league:
+                    continue
+
                 competitions = ev.get('competitions', [])
                 for comp in competitions:
                     competitors = comp.get('competitors', [])
@@ -59,7 +77,6 @@ def home():
                             away_team = team.get('team', {}).get('displayName', 'Away')
                             a_score = team.get('score', '-')
                     
-                    # የውሸት ወይም ያልታወቁ ቡድኖችን ማጣራት (Filter out mock/test entries)
                     if home_team in ["Home", "Away"] or away_team in ["Home", "Away"] or not home_team or not away_team:
                         continue
 
@@ -122,7 +139,6 @@ def home():
                     for label in all_labels:
                         h_val = home_stats.get(label, '0')
                         a_val = away_stats.get(label, '0')
-                        # ትክክለኛ ስታቲስቲክስ ከሌለ (ሁለቱም 0 ከሆኑ) አናሳይም
                         if h_val != '0' or a_val != '0':
                             match_details["statistics"].append({
                                 "label": label,
@@ -262,7 +278,7 @@ def home():
                 
             html_content += f"""
             <div class="match-card">
-                <div class="team home"><span>{match['home']}</span></div>
+                <div class="team home"><span>{match['home']}</span>}</div>
                 <a href="/?date={selected_date}&match_id={match['id']}" class="score-box">
                     {match['h']} - {match['a']}
                     <div class="match-status">{match['status']}</div>
@@ -271,7 +287,7 @@ def home():
             </div>
             """
     else:
-        html_content += f'<div class="no-match">No matches found for ({selected_date}). Please try another date.</div>'
+        html_content += f'<div class="no-match">No major league matches found for ({selected_date}).</div>'
         
     html_content += """
         </div>
