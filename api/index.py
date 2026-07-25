@@ -148,8 +148,8 @@ def home():
             <head>
                 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <title>{{ match.home }} vs {{ match.away }} - Koki Score</title>
-                <!-- Adsterra Social Bar Script -->
-                <script type="text/javascript" src="//pl30417841.highrevenuenetwork.com/tag.js"></script>
+                <!-- Adsterra Social Bar Script (Updated) -->
+                <script type="text/javascript" src="https://pl30518340.effectivecpmnetwork.com/8c/d4/6b/8cd46b5b8dc5c8760a2063e5f3663df5.js"></script>
                 <style>
                     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f6f9; margin: 0; padding: 0; }
                     .top-bar { background: #0d47a1; color: white; padding: 14px; text-align: center; font-size: 18px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
@@ -231,8 +231,8 @@ def home():
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Koki Score</title>
-        <!-- Adsterra Social Bar Script -->
-        <script type="text/javascript" src="//pl30417841.highrevenuenetwork.com/tag.js"></script>
+        <!-- Adsterra Social Bar Script (Updated) -->
+        <script type="text/javascript" src="https://pl30518340.effectivecpmnetwork.com/8c/d4/6b/8cd46b5b8dc5c8760a2063e5f3663df5.js"></script>
         <style>
             body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f4f6f9; margin: 0; padding: 0; }}
             .top-bar {{ background-color: #0d47a1; color: white; padding: 14px; text-align: center; font-size: 18px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
