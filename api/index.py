@@ -20,22 +20,17 @@ LEAGUES_MAP = {
 # ---------------------------------------------------------
 # ADSTERRA AD CODES SECTION
 # ---------------------------------------------------------
-# 1. Social Bar / Existing Script
 SOCIAL_BAR_CODE = """
 <script type="text/javascript" src="https://pl30518340.effectivecpmnetwork.com/8c/d4/6b/8cd46b5b8dc5c8760a2063e5f3663df5.js"></script>
 """
 
-# 2. Interstitial / Popunder Ad Code (ከ Adsterra አዲስ ስታመጣ እዚህ ለጥፈው)
 INTERSTITIAL_AD_CODE = """
-<!-- Interstitial Ad Code Go Here -->
+<!-- Interstitial Ad Code -->
 """
 
-# 3. Banner Ad Code (ከ Adsterra/AdSense የ Banner HTML/Script ስታመጣ እዚህ ለጥፈው)
 BANNER_AD_CODE = """
-<div style="text-align: center; margin: 15px 0; min-height: 60px; background: #ffffff; padding: 5px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-    <span style="font-size: 9px; color: #999; display: block; margin-bottom: 2px;">SPONSORED AD</span>
-    <!-- የ Banner Script/Iframe እዚህ ቦታ ይገባል -->
-    <div style="font-size: 12px; color: #777;">[ Banner Ad Space ]</div>
+<div style="text-align: center; margin: 15px 0; min-height: 50px;">
+    <!-- Banner Ad Code Space -->
 </div>
 """
 # ---------------------------------------------------------
@@ -44,22 +39,22 @@ def extract_league_name(event):
     comps = event.get('competitions', [])
     if comps:
         lg = comps[0].get('league', {})
+        if lg.get('displayName'):
+            return lg.get('displayName')
         if lg.get('name'):
             return lg.get('name')
-        if lg.get('abbreviation'):
-            return lg.get('abbreviation')
 
     evt_lg = event.get('league', {})
-    if evt_lg.get('name'):
-        return evt_lg.get('name')
     if evt_lg.get('displayName'):
         return evt_lg.get('displayName')
+    if evt_lg.get('name'):
+        return evt_lg.get('name')
 
     season_slug = event.get('season', {}).get('slug', '')
     if season_slug:
         return season_slug.replace('-', ' ').title()
 
-    return "Soccer Match"
+    return "Football Match"
 
 @app.route('/manifest.json')
 def serve_manifest():
@@ -237,7 +232,7 @@ def match_details(match_id):
             home_team = header.get('competitors', [{}])[0]
             away_team = header.get('competitors', [{}])[1]
             
-            league_name = data.get('header', {}).get('league', {}).get('name') or data.get('header', {}).get('league', {}).get('displayName', 'Football Match')
+            league_name = data.get('header', {}).get('league', {}).get('displayName') or data.get('header', {}).get('league', {}).get('name', 'Football Match')
 
             match_data = {
                 "league": league_name,
