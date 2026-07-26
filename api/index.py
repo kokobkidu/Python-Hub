@@ -1,4 +1,10 @@
-# የተስፋፋ የሊጎች ዝርዝር (Europe, Saudi, Brazil, MLS, etc.)
+import os
+import requests
+from flask import Flask, render_template_string, request
+
+app = Flask(__name__)
+
+# የተስፋፋ የሊጎች ዝርዝር (እንግሊዝ፣ ስፔን፣ ጣሊያን፣ ጀርመን፣ ፈረንሳይ፣ ሻምፒዮንስ ሊግ፣ ሳውዲ፣ ብራዚል፣ ኤምኤልኤስ)
 LEAGUES_MAP = {
     "eng.1": "English Premier League",
     "esp.1": "Spanish La Liga",
@@ -10,6 +16,216 @@ LEAGUES_MAP = {
     "bra.1": "Brazilian Série A",
     "usa.1": "MLS"
 }
+
+@app.route('/')
+def home():
+    selected_date = request.args.get('date', '')
+    url = "https://site.api.espn.com/apis/site/v2/sports/soccer/all/scoreboard"
+    if selected_date:
+        url += f"?dates={selected_date.replace('-', '')}"
+        
+    matches = []
+    try:
+        res = requests.get(url, timeout=5)
+        if res.status_code == 200:
+            events = res.json().get('events', [])
+            for event in events:
+                comp = event['competitions'][0]
+                home_team = comp['competitors'][0]
+                away_team = comp['competitors'][1]
+                
+                status_type = event['status']['type']['name']
+                detail = event['status']['type']['shortDetail']
+                
+                status = "UPCOMING"
+                if status_type in ['STATUS_IN_PROGRESS', 'STATUS_HALFTIME']:
+                    status = "LIVE"
+                elif status_type == 'STATUS_FULL_TIME':
+                    status = "FINISHED"
+
+                matches.append({
+                    "league": event.get('season', {}).get('slug', 'Football Match'),
+                    "home": home_team['team']['displayName'],
+                    "home_logo": home_team['team'].get('logo', ''),
+                    "home_score": home_team.get('score', '0'),
+                    "away": away_team['team']['displayName'],
+                    "away_logo": away_team['team'].get('logo', ''),
+                    "away_score": away_team.get('score', '0'),
+                    "status": status,
+                    "detail": detail
+                })
+    except Exception as e:
+        print("Error fetching matches:", e)
+
+    return render_template_string("""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Koki Score - Live Football</title>
+        <script type="text/javascript" src="https://pl30518340.effectivecpmnetwork.com/8c/d4/6b/8cd46b5b8dc5c8760a2063e5f3663df5.js"></script>
+        <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f6f9; margin: 0; padding: 0; }
+            .top-bar { background: #0d47a1; color: white; padding: 14px; text-align: center; font-size: 18px; font-weight: bold; }
+            .nav-menu { display: flex; justify-content: center; background: #0a3578; padding: 8px; flex-wrap: wrap; }
+            .nav-link { color: white; text-decoration: none; font-weight: bold; margin: 4px 8px; font-size: 13px; opacity: 0.9; }
+            .nav-link.active { border-bottom: 2px solid #ffeb3b; color: #ffeb3b; }
+            .date-picker { background: white; padding: 10px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+            .date-picker input { padding: 6px 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; }
+            .container { padding: 10px; max-width: 600px; margin: auto; }
+            .match-card { background: white; border-radius: 10px; padding: 12px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.03); }
+            .match-header { font-size: 11px; color: #666; text-transform: uppercase; margin-bottom: 8px; font-weight: bold; }
+            .teams { display: flex; justify-content: space-between; align-items: center; }
+            .team { display: flex; align-items: center; width: 40%; }
+            .team.away { justify-content: flex-end; }
+            .logo { width: 24px; height: 24px; margin: 0 6px; }
+            .score { font-size: 18px; font-weight: bold; background: #eee; padding: 4px 10px; border-radius: 6px; }
+            .badge { font-size: 10px; padding: 3px 6px; border-radius: 4px; font-weight: bold; display: inline-block; }
+            .LIVE { background: #ffebee; color: #c62828; }
+            .FINISHED { background: #e8f5e9; color: #2e7d32; }
+            .UPCOMING { background: #e3f2fd; color: #1565c0; }
+        </style>
+    </head>
+    <body>
+        <div class="top-bar">⚽ Koki Score</div>
+        <div class="nav-menu">
+            <a href="/" class="nav-link active">🏟️ Matches</a>
+            <a href="/standings" class="nav-link">📊 Standings</a>
+            <a href="/topscorers" class="nav-link">⚽ Top Scorers</a>
+        </div>
+        <div class="date-picker">
+            <form method="GET" action="/">
+                <input type="date" name="date" value="{{ selected_date }}" onchange="this.form.submit()">
+            </form>
+        </div>
+        <div class="container">
+            {% for m in matches %}
+            <div class="match-card">
+                <div class="match-header">
+                    <span class="badge {{ m.status }}">{{ m.status }}</span> • {{ m.detail }}
+                </div>
+                <div class="teams">
+                    <div class="team">
+                        <img class="logo" src="{{ m.home_logo }}">
+                        <span>{{ m.home }}</span>
+                    </div>
+                    <div class="score">{{ m.home_score }} - {{ m.away_score }}</div>
+                    <div class="team away">
+                        <span>{{ m.away }}</span>
+                        <img class="logo" src="{{ m.away_logo }}">
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <p style="text-align:center; color: #777;">ለተመረጠው ቀን ምንም ጨዋታዎች አልተገኙም።</p>
+            {% endfor %}
+        </div>
+    </body>
+    </html>
+    """, matches=matches, selected_date=selected_date)
+
+
+@app.route('/standings')
+def standings():
+    league_code = request.args.get('league', 'eng.1')
+    standings_data = []
+    
+    url = f"https://site.api.espn.com/apis/v2/sports/soccer/{league_code}/standings"
+    try:
+        res = requests.get(url, timeout=5)
+        if res.status_code == 200:
+            children = res.json().get('children', [])
+            if children:
+                entries = children[0].get('standings', {}).get('entries', [])
+                for item in entries:
+                    team = item.get('team', {})
+                    stats = {s['name']: s['value'] for s in item.get('stats', [])}
+                    standings_data.append({
+                        "rank": item.get('stats', [{}])[0].get('value', '-'),
+                        "team": team.get('displayName', ''),
+                        "logo": team.get('logos', [{}])[0].get('href', ''),
+                        "played": stats.get('gamesPlayed', 0),
+                        "wins": stats.get('wins', 0),
+                        "draws": stats.get('ties', 0),
+                        "losses": stats.get('losses', 0),
+                        "pts": stats.get('points', 0)
+                    })
+    except Exception as e:
+        print("Standings Error:", e)
+
+    return render_template_string("""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Standings - Koki Score</title>
+        <script type="text/javascript" src="https://pl30518340.effectivecpmnetwork.com/8c/d4/6b/8cd46b5b8dc5c8760a2063e5f3663df5.js"></script>
+        <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f6f9; margin: 0; padding: 0; }
+            .top-bar { background: #0d47a1; color: white; padding: 14px; text-align: center; font-size: 18px; font-weight: bold; }
+            .nav-menu { display: flex; justify-content: center; background: #0a3578; padding: 8px; flex-wrap: wrap; }
+            .nav-link { color: white; text-decoration: none; font-weight: bold; margin: 4px 8px; font-size: 13px; opacity: 0.9; }
+            .nav-link.active { border-bottom: 2px solid #ffeb3b; color: #ffeb3b; }
+            .league-selector { display: flex; overflow-x: auto; background: #1565c0; padding: 8px; scrollbar-width: none; }
+            .league-btn { color: #bbdefb; text-decoration: none; padding: 6px 12px; font-size: 12px; font-weight: bold; border-radius: 15px; white-space: nowrap; margin-right: 5px; }
+            .league-btn.active { background: #ffeb3b; color: #0d47a1; }
+            .container { padding: 10px; max-width: 600px; margin: auto; }
+            table { width: 100%; background: white; border-collapse: collapse; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.03); font-size: 13px; }
+            th { background: #e3f2fd; color: #0d47a1; padding: 10px; text-align: center; }
+            td { padding: 10px; text-align: center; border-bottom: 1px solid #eee; }
+            .team-cell { display: flex; align-items: center; text-align: left; }
+            .team-logo { width: 20px; height: 20px; margin-right: 8px; }
+        </style>
+    </head>
+    <body>
+        <div class="top-bar">📊 League Standings</div>
+        <div class="nav-menu">
+            <a href="/" class="nav-link">🏟️ Matches</a>
+            <a href="/standings" class="nav-link active">📊 Standings</a>
+            <a href="/topscorers" class="nav-link">⚽ Top Scorers</a>
+        </div>
+        <div class="league-selector">
+            {% for code, name in leagues.items() %}
+                <a href="/standings?league={{ code }}" class="league-btn {% if code == selected_league %}active{% endif %}">{{ name }}</a>
+            {% endfor %}
+        </div>
+        <div class="container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th style="text-align:left;">Team</th>
+                        <th>P</th>
+                        <th>W</th>
+                        <th>D</th>
+                        <th>L</th>
+                        <th><b>PTS</b></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in standings %}
+                    <tr>
+                        <td><b>{{ row.rank }}</b></td>
+                        <td class="team-cell">
+                            <img src="{{ row.logo }}" class="team-logo">
+                            <span>{{ row.team }}</span>
+                        </td>
+                        <td>{{ row.played }}</td>
+                        <td>{{ row.wins }}</td>
+                        <td>{{ row.draws }}</td>
+                        <td>{{ row.losses }}</td>
+                        <td><b>{{ row.pts }}</b></td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="7">ምንም የደረጃ መረጃ አልተገኘም።</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </body>
+    </html>
+    """, standings=standings_data, leagues=LEAGUES_MAP, selected_league=league_code)
+
 
 @app.route('/topscorers')
 def topscorers():
@@ -47,14 +263,14 @@ def topscorers():
                         "goals": int(goals)
                     })
                     
-        # 2. Fallback attempt if leaders list is empty (Fetch from Standings or Statistics if available)
+        # 2. Fallback attempt if leaders list is empty
         if not scorers_data:
             stat_url = f"https://site.api.espn.com/apis/site/v2/sports/soccer/{league_code}/statistics"
             s_res = requests.get(stat_url, timeout=5)
             if s_res.status_code == 200:
                 s_data = s_res.json()
                 stats_categories = s_data.get('stats', {}).get('categories', [])
-                goals_stat = next((sc for sc in stats_categories if sc.get('name') == 'offense' or sc.get('name') == 'goals'), None)
+                goals_stat = next((sc for sc in stats_categories if sc.get('name') in ['offense', 'goals']), None)
                 if goals_stat:
                     for idx, athlete_stat in enumerate(goals_stat.get('athletes', [])[:15], start=1):
                         ath = athlete_stat.get('athlete', {})
@@ -128,10 +344,15 @@ def topscorers():
                 {% endfor %}
             {% else %}
                 <div style="text-align:center; padding: 30px; color: #777; background: white; border-radius: 10px;">
-                    No top scorers data currently available for this league (Season break or pending data).
+                    ለዚህ ሊግ በአሁኑ ወቅት የጎል አገባቢዎች መረጃ አልተገኘም (የእረፍት ወቅት ወይም መረጃው በሂደት ላይ ነው)።
                 </div>
             {% endif %}
         </div>
     </body>
     </html>
     """, scorers=scorers_data, leagues=LEAGUES_MAP, selected_league=league_code)
+
+
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
