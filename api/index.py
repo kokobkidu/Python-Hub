@@ -11,7 +11,6 @@ ALLOWED_KEYWORDS = [
     "SUPER LIG", "PRO LEAGUE", "WORLD CUP", "MLS", "ARGENTINA"
 ]
 
-# ለ Standings የሚያገለግሉ የሊግ Slug ቁልፎች
 LEAGUES_MAP = {
     "eng.1": "English Premier League",
     "esp.1": "Spanish La Liga",
@@ -134,7 +133,7 @@ def home():
                 <style>
                     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f6f9; margin: 0; padding: 0; }
                     .top-bar { background: #0d47a1; color: white; padding: 14px; text-align: center; font-size: 18px; font-weight: bold; }
-                    .nav-menu { display: flex; justify-content: center; background: #1565c0; padding: 8px; }
+                    .nav-menu { display: flex; justify-content: center; background: #0a3578; padding: 8px; }
                     .nav-link { color: white; text-decoration: none; font-weight: bold; margin: 0 12px; font-size: 14px; }
                     .back-btn { display: inline-block; margin: 12px 15px; color: #0d47a1; text-decoration: none; font-weight: bold; font-size: 14px; }
                     .container { padding: 0 15px 20px 15px; max-width: 600px; margin: auto; }
@@ -269,37 +268,48 @@ def home():
     return html_content
 
 
-# -------------------------------------------------------------
-# 🔥 አዲሱ LEAGUE STANDINGS ROUTE (የደረጃ ሰንጠረዥ)
-# -------------------------------------------------------------
 @app.route('/standings')
 def standings():
     league_code = request.args.get('league', 'eng.1')
     table_data = []
-    league_name = LEAGUES_MAP.get(league_code, "League Standings")
     
     try:
         url = f"https://site.api.espn.com/apis/v2/sports/soccer/{league_code}/standings"
         res = requests.get(url, timeout=5)
         if res.status_code == 200:
             data = res.json()
-            entries = data.get('children', [{}])[0].get('standings', {}).get('entries', [])
-            if not entries:
+            
+            entries = []
+            if 'children' in data and len(data['children']) > 0:
+                entries = data['children'][0].get('standings', {}).get('entries', [])
+            elif 'standings' in data:
                 entries = data.get('standings', {}).get('entries', [])
                 
             for entry in entries:
                 team_name = entry.get('team', {}).get('displayName', 'Team')
                 logo = entry.get('team', {}).get('logos', [{}])[0].get('href', '')
+                
                 stats = {s.get('name'): s.get('value') for s in entry.get('stats', [])}
                 
+                try:
+                    rank_val = int(float(stats.get('rank', 0)))
+                except:
+                    rank_val = '-'
+                    
                 table_data.append({
-                    "rank": stats.get('rank', '-'),
+                    "rank": rank_val,
                     "team": team_name,
                     "logo": logo,
-                    "p": int(stats.get('gamesPlayed', 0)),
-                    "gd": int(stats.get('pointDifferential', 0)),
-                    "pts": int(stats.get('points', 0))
+                    "p": int(float(stats.get('gamesPlayed', 0))),
+                    "gd": int(float(stats.get('pointDifferential', 0))),
+                    "pts": int(float(stats.get('points', 0)))
                 })
+                
+            table_data.sort(key=lambda x: (x['pts'], x['gd']), reverse=True)
+            
+            for idx, item in enumerate(table_data, start=1):
+                item['rank'] = idx
+
     except Exception as e:
         print("Standings Error:", e)
 
