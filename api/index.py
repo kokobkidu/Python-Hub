@@ -45,9 +45,15 @@ def home():
                 else:
                     status = "UPCOMING"
 
+                # የሊጉን ስም በትክክል ማውጫ
+                league_info = event.get('league', {})
+                league_name = league_info.get('name') or league_info.get('displayName') or event.get('season', {}).get('slug', '').replace('-', ' ').title()
+                if not league_name or league_name.lower() == 'soccer':
+                    league_name = "Soccer Match"
+
                 matches.append({
                     "id": event.get('id'),
-                    "league": event.get('season', {}).get('slug', 'Football Match'),
+                    "league": league_name,
                     "home": home_team['team']['displayName'],
                     "home_logo": home_team['team'].get('logo', ''),
                     "home_score": home_team.get('score', '0'),
@@ -77,7 +83,8 @@ def home():
             .date-picker input { padding: 8px 14px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; outline: none; font-weight: bold; color: #0d47a1; }
             .container { padding: 10px; max-width: 600px; margin: auto; }
             .match-card { background: white; border-radius: 10px; padding: 12px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.03); display: block; text-decoration: none; color: inherit; }
-            .match-header { font-size: 11px; color: #666; text-transform: uppercase; margin-bottom: 8px; font-weight: bold; }
+            .league-title { font-size: 11px; font-weight: bold; color: #0d47a1; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f0f0f0; padding-bottom: 4px; }
+            .match-header { font-size: 11px; color: #666; text-transform: uppercase; margin-bottom: 8px; font-weight: bold; display: flex; align-items: center; gap: 6px; }
             .teams { display: flex; justify-content: space-between; align-items: center; }
             .team { display: flex; align-items: center; width: 40%; }
             .team.away { justify-content: flex-end; }
@@ -104,8 +111,12 @@ def home():
         <div class="container">
             {% for m in matches %}
             <a href="/match/{{ m.id }}" class="match-card">
+                <div class="league-title">
+                    <span>🏆 {{ m.league }}</span>
+                    <span style="color: #666; font-weight: normal;">{{ m.detail }}</span>
+                </div>
                 <div class="match-header">
-                    <span class="badge {{ m.status }}">{{ m.status }}</span> • {{ m.detail }}
+                    <span class="badge {{ m.status }}">{{ m.status }}</span>
                 </div>
                 <div class="teams">
                     <div class="team">
@@ -143,8 +154,10 @@ def match_details(match_id):
             home_team = header.get('competitors', [{}])[0]
             away_team = header.get('competitors', [{}])[1]
             
+            league_name = data.get('header', {}).get('league', {}).get('name', 'Football Match')
+
             match_data = {
-                "league": data.get('header', {}).get('league', {}).get('name', 'Football Match'),
+                "league": league_name,
                 "home": home_team.get('team', {}).get('displayName', 'Home'),
                 "home_score": home_team.get('score', '0'),
                 "away": away_team.get('team', {}).get('displayName', 'Away'),
@@ -206,7 +219,7 @@ def match_details(match_id):
             <a href="/" class="back-btn">← Back to Matches</a>
             
             <div class="card" style="text-align: center;">
-                <div class="header-league">{{ match.league }}</div>
+                <div class="header-league">🏆 {{ match.league }}</div>
                 <div class="score-box">
                     <div class="team-name">{{ match.home }}</div>
                     <div class="score-num">{{ match.home_score }} - {{ match.away_score }}</div>
