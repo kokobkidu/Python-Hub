@@ -17,6 +17,31 @@ LEAGUES_MAP = {
     "usa.1": "MLS"
 }
 
+def extract_league_name(event):
+    """ከ ESPN API የሊጉን ወይም የውድድሩን ትክክለኛ ስም ማውጫ"""
+    # Option 1: competitions -> league -> name / abbreviation
+    comps = event.get('competitions', [])
+    if comps:
+        lg = comps[0].get('league', {})
+        if lg.get('name'):
+            return lg.get('name')
+        if lg.get('abbreviation'):
+            return lg.get('abbreviation')
+
+    # Option 2: Direct event -> league
+    evt_lg = event.get('league', {})
+    if evt_lg.get('name'):
+        return evt_lg.get('name')
+    if evt_lg.get('displayName'):
+        return evt_lg.get('displayName')
+
+    # Option 3: Season Slug
+    season_slug = event.get('season', {}).get('slug', '')
+    if season_slug:
+        return season_slug.replace('-', ' ').title()
+
+    return "Soccer Match"
+
 @app.route('/')
 def home():
     selected_date = request.args.get('date', datetime.now().strftime('%Y-%m-%d'))
@@ -46,10 +71,7 @@ def home():
                     status = "UPCOMING"
 
                 # የሊጉን ስም በትክክል ማውጫ
-                league_info = event.get('league', {})
-                league_name = league_info.get('name') or league_info.get('displayName') or event.get('season', {}).get('slug', '').replace('-', ' ').title()
-                if not league_name or league_name.lower() == 'soccer':
-                    league_name = "Soccer Match"
+                league_name = extract_league_name(event)
 
                 matches.append({
                     "id": event.get('id'),
@@ -154,7 +176,7 @@ def match_details(match_id):
             home_team = header.get('competitors', [{}])[0]
             away_team = header.get('competitors', [{}])[1]
             
-            league_name = data.get('header', {}).get('league', {}).get('name', 'Football Match')
+            league_name = data.get('header', {}).get('league', {}).get('name') or data.get('header', {}).get('league', {}).get('displayName', 'Football Match')
 
             match_data = {
                 "league": league_name,
