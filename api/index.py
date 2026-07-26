@@ -1,6 +1,6 @@
 import os
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import Flask, render_template_string, request, send_from_directory
 
 app = Flask(__name__)
@@ -55,6 +55,20 @@ def extract_league_name(event):
         return season_slug.replace('-', ' ').title()
 
     return "Football Match"
+
+def format_kickoff_time(date_str):
+    try:
+        # ESPN API usually returns ISO format e.g. "2026-07-26T19:00Z"
+        dt = datetime.strptime(date_str, "%Y-%m-%dT%HZ")
+    except ValueError:
+        try:
+            dt = datetime.strptime(date_str, "%Y-%m-%dT%H:%MZ")
+        except ValueError:
+            return ""
+    
+    # Convert UTC to East Africa Time (EAT - UTC+3)
+    eat_time = dt + timedelta(hours=3)
+    return eat_time.strftime("%I:%M %p")
 
 @app.route('/manifest.json')
 def serve_manifest():
@@ -117,12 +131,18 @@ def home():
                 status_state = event['status']['type']['state']
                 detail = event['status']['type']['shortDetail']
                 
+                # Kickoff time
+                event_date = event.get('date', '')
+                start_time = format_kickoff_time(event_date) if event_date else ""
+
                 if status_state == 'in':
                     status = "LIVE"
                 elif status_state == 'post':
                     status = "FINISHED"
                 else:
                     status = "UPCOMING"
+                    if start_time:
+                        detail = f"⏰ {start_time}"
 
                 league_name = extract_league_name(event)
 
@@ -136,7 +156,8 @@ def home():
                     "away_logo": away_team['team'].get('logo', ''),
                     "away_score": away_team.get('score', '0'),
                     "status": status,
-                    "detail": detail
+                    "detail": detail,
+                    "start_time": start_time
                 })
     except Exception as e:
         print("Error fetching matches:", e)
@@ -159,7 +180,7 @@ def home():
             .container { padding: 10px; max-width: 600px; margin: auto; }
             .match-card { background: white; border-radius: 10px; padding: 12px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.03); display: block; text-decoration: none; color: inherit; }
             .league-title { font-size: 11px; font-weight: bold; color: #0d47a1; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f0f0f0; padding-bottom: 4px; }
-            .match-header { font-size: 11px; color: #666; text-transform: uppercase; margin-bottom: 8px; font-weight: bold; display: flex; align-items: center; gap: 6px; }
+            .match-header { font-size: 11px; color: #666; text-transform: uppercase; margin-bottom: 8px; font-weight: bold; display: flex; align-items: center; justify-content: space-between; }
             .teams { display: flex; justify-content: space-between; align-items: center; }
             .team { display: flex; align-items: center; width: 40%; }
             .team.away { justify-content: flex-end; }
@@ -169,6 +190,7 @@ def home():
             .LIVE { background: #ffebee; color: #c62828; }
             .FINISHED { background: #e8f5e9; color: #2e7d32; }
             .UPCOMING { background: #e3f2fd; color: #1565c0; }
+            .time-text { font-size: 11px; font-weight: bold; color: #2e7d32; background: #e8f5e9; padding: 2px 6px; border-radius: 4px; }
         </style>
     </head>
     <body>
@@ -192,6 +214,9 @@ def home():
                 </div>
                 <div class="match-header">
                     <span class="badge {{ m.status }}">{{ m.status }}</span>
+                    {% if m.start_time %}
+                        <span class="time-text">🕒 {{ m.start_time }}</span>
+                    {% endif %}
                 </div>
                 <div class="teams">
                     <div class="team">
