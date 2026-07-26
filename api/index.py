@@ -1,10 +1,10 @@
 import os
 import requests
+from datetime import datetime
 from flask import Flask, render_template_string, request
 
 app = Flask(__name__)
 
-# የተስፋፋ የሊጎች ዝርዝር (እንግሊዝ፣ ስፔን፣ ጣሊያን፣ ጀርመን፣ ፈረንሳይ፣ ሻምፒዮንስ ሊግ፣ ሳውዲ፣ ብራዚል፣ ኤምኤልኤስ)
 LEAGUES_MAP = {
     "eng.1": "English Premier League",
     "esp.1": "Spanish La Liga",
@@ -19,7 +19,8 @@ LEAGUES_MAP = {
 
 @app.route('/')
 def home():
-    selected_date = request.args.get('date', '')
+    selected_date = request.args.get('date', datetime.now().strftime('%Y-%m-%d'))
+    
     url = "https://site.api.espn.com/apis/site/v2/sports/soccer/all/scoreboard"
     if selected_date:
         url += f"?dates={selected_date.replace('-', '')}"
@@ -34,14 +35,15 @@ def home():
                 home_team = comp['competitors'][0]
                 away_team = comp['competitors'][1]
                 
-                status_type = event['status']['type']['name']
+                status_state = event['status']['type']['state']
                 detail = event['status']['type']['shortDetail']
                 
-                status = "UPCOMING"
-                if status_type in ['STATUS_IN_PROGRESS', 'STATUS_HALFTIME']:
+                if status_state == 'in':
                     status = "LIVE"
-                elif status_type == 'STATUS_FULL_TIME':
+                elif status_state == 'post':
                     status = "FINISHED"
+                else:
+                    status = "UPCOMING"
 
                 matches.append({
                     "league": event.get('season', {}).get('slug', 'Football Match'),
@@ -71,14 +73,14 @@ def home():
             .nav-link { color: white; text-decoration: none; font-weight: bold; margin: 4px 8px; font-size: 13px; opacity: 0.9; }
             .nav-link.active { border-bottom: 2px solid #ffeb3b; color: #ffeb3b; }
             .date-picker { background: white; padding: 10px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-            .date-picker input { padding: 6px 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; }
+            .date-picker input { padding: 8px 14px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; outline: none; font-weight: bold; color: #0d47a1; }
             .container { padding: 10px; max-width: 600px; margin: auto; }
             .match-card { background: white; border-radius: 10px; padding: 12px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.03); }
             .match-header { font-size: 11px; color: #666; text-transform: uppercase; margin-bottom: 8px; font-weight: bold; }
             .teams { display: flex; justify-content: space-between; align-items: center; }
             .team { display: flex; align-items: center; width: 40%; }
             .team.away { justify-content: flex-end; }
-            .logo { width: 24px; height: 24px; margin: 0 6px; }
+            .logo { width: 24px; height: 24px; margin: 0 6px; object-fit: contain; }
             .score { font-size: 18px; font-weight: bold; background: #eee; padding: 4px 10px; border-radius: 6px; }
             .badge { font-size: 10px; padding: 3px 6px; border-radius: 4px; font-weight: bold; display: inline-block; }
             .LIVE { background: #ffebee; color: #c62828; }
@@ -106,18 +108,18 @@ def home():
                 </div>
                 <div class="teams">
                     <div class="team">
-                        <img class="logo" src="{{ m.home_logo }}">
+                        <img class="logo" src="{{ m.home_logo }}" onerror="this.style.display='none'">
                         <span>{{ m.home }}</span>
                     </div>
                     <div class="score">{{ m.home_score }} - {{ m.away_score }}</div>
                     <div class="team away">
                         <span>{{ m.away }}</span>
-                        <img class="logo" src="{{ m.away_logo }}">
+                        <img class="logo" src="{{ m.away_logo }}" onerror="this.style.display='none'">
                     </div>
                 </div>
             </div>
             {% else %}
-            <p style="text-align:center; color: #777;">ለተመረጠው ቀን ምንም ጨዋታዎች አልተገኙም።</p>
+            <p style="text-align:center; color: #777; padding: 20px;">No matches found for the selected date.</p>
             {% endfor %}
         </div>
     </body>
@@ -134,22 +136,35 @@ def standings():
     try:
         res = requests.get(url, timeout=5)
         if res.status_code == 200:
-            children = res.json().get('children', [])
-            if children:
-                entries = children[0].get('standings', {}).get('entries', [])
-                for item in entries:
-                    team = item.get('team', {})
-                    stats = {s['name']: s['value'] for s in item.get('stats', [])}
-                    standings_data.append({
-                        "rank": item.get('stats', [{}])[0].get('value', '-'),
-                        "team": team.get('displayName', ''),
-                        "logo": team.get('logos', [{}])[0].get('href', ''),
-                        "played": stats.get('gamesPlayed', 0),
-                        "wins": stats.get('wins', 0),
-                        "draws": stats.get('ties', 0),
-                        "losses": stats.get('losses', 0),
-                        "pts": stats.get('points', 0)
-                    })
+            data = res.json()
+            entries = []
+            
+            # 1. Primary path check
+            if 'children' in data and len(data['children']) > 0:
+                entries = data['children'][0].get('standings', {}).get('entries', [])
+            # 2. Alternative direct path check
+            elif 'standings' in data:
+                entries = data.get('standings', {}).get('entries', [])
+                
+            for idx, item in enumerate(entries, start=1):
+                team = item.get('team', {})
+                stats = {s['name']: s['value'] for s in item.get('stats', [])}
+                
+                # Dynamic rank fallback
+                rank_val = stats.get('rank', idx)
+                if rank_val == 0 or not rank_val:
+                    rank_val = idx
+
+                standings_data.append({
+                    "rank": int(rank_val),
+                    "team": team.get('displayName', ''),
+                    "logo": team.get('logos', [{}])[0].get('href', '') if team.get('logos') else '',
+                    "played": int(stats.get('gamesPlayed', 0)),
+                    "wins": int(stats.get('wins', 0)),
+                    "draws": int(stats.get('ties', 0)),
+                    "losses": int(stats.get('losses', 0)),
+                    "pts": int(stats.get('points', 0))
+                })
     except Exception as e:
         print("Standings Error:", e)
 
@@ -174,7 +189,7 @@ def standings():
             th { background: #e3f2fd; color: #0d47a1; padding: 10px; text-align: center; }
             td { padding: 10px; text-align: center; border-bottom: 1px solid #eee; }
             .team-cell { display: flex; align-items: center; text-align: left; }
-            .team-logo { width: 20px; height: 20px; margin-right: 8px; }
+            .team-logo { width: 20px; height: 20px; margin-right: 8px; object-fit: contain; }
         </style>
     </head>
     <body>
@@ -207,7 +222,7 @@ def standings():
                     <tr>
                         <td><b>{{ row.rank }}</b></td>
                         <td class="team-cell">
-                            <img src="{{ row.logo }}" class="team-logo">
+                            {% if row.logo %}<img src="{{ row.logo }}" class="team-logo">{% endif %}
                             <span>{{ row.team }}</span>
                         </td>
                         <td>{{ row.played }}</td>
@@ -217,7 +232,7 @@ def standings():
                         <td><b>{{ row.pts }}</b></td>
                     </tr>
                     {% else %}
-                    <tr><td colspan="7">ምንም የደረጃ መረጃ አልተገኘም።</td></tr>
+                    <tr><td colspan="7">No standings data available currently.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
@@ -233,7 +248,7 @@ def topscorers():
     scorers_data = []
     
     try:
-        # 1. First attempt: Standard Leaders API
+        # 1. Leaders Endpoint
         url = f"https://site.api.espn.com/apis/v2/sports/soccer/{league_code}/leaders"
         res = requests.get(url, timeout=5)
         
@@ -248,7 +263,7 @@ def topscorers():
                 
             if goals_category:
                 leaders = goals_category.get('leaders', [])
-                for idx, leader in enumerate(leaders, start=1):
+                for idx, leader in enumerate(leaders[:20], start=1):
                     athlete = leader.get('athlete', {})
                     name = athlete.get('displayName', athlete.get('fullName', 'Player'))
                     headshot = athlete.get('headshot', {}).get('href', '') if isinstance(athlete.get('headshot'), dict) else athlete.get('headshot', '')
@@ -263,16 +278,16 @@ def topscorers():
                         "goals": int(goals)
                     })
                     
-        # 2. Fallback attempt if leaders list is empty
+        # 2. Fallback to Statistics Endpoint if leaders is empty
         if not scorers_data:
             stat_url = f"https://site.api.espn.com/apis/site/v2/sports/soccer/{league_code}/statistics"
             s_res = requests.get(stat_url, timeout=5)
             if s_res.status_code == 200:
                 s_data = s_res.json()
                 stats_categories = s_data.get('stats', {}).get('categories', [])
-                goals_stat = next((sc for sc in stats_categories if sc.get('name') in ['offense', 'goals']), None)
+                goals_stat = next((sc for sc in stats_categories if sc.get('name') in ['offense', 'goals', 'scoring']), None)
                 if goals_stat:
-                    for idx, athlete_stat in enumerate(goals_stat.get('athletes', [])[:15], start=1):
+                    for idx, athlete_stat in enumerate(goals_stat.get('athletes', [])[:20], start=1):
                         ath = athlete_stat.get('athlete', {})
                         scorers_data.append({
                             "rank": idx,
@@ -344,7 +359,7 @@ def topscorers():
                 {% endfor %}
             {% else %}
                 <div style="text-align:center; padding: 30px; color: #777; background: white; border-radius: 10px;">
-                    ለዚህ ሊግ በአሁኑ ወቅት የጎል አገባቢዎች መረጃ አልተገኘም (የእረፍት ወቅት ወይም መረጃው በሂደት ላይ ነው)።
+                    No top scorers data currently available for this league.
                 </div>
             {% endif %}
         </div>
