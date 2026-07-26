@@ -17,6 +17,29 @@ LEAGUES_MAP = {
     "usa.1": "MLS"
 }
 
+# ---------------------------------------------------------
+# ADSTERRA AD CODES SECTION
+# ---------------------------------------------------------
+# 1. Social Bar / Existing Script
+SOCIAL_BAR_CODE = """
+<script type="text/javascript" src="https://pl30518340.effectivecpmnetwork.com/8c/d4/6b/8cd46b5b8dc5c8760a2063e5f3663df5.js"></script>
+"""
+
+# 2. Interstitial / Popunder Ad Code (ከ Adsterra አዲስ ስታመጣ እዚህ ለጥፈው)
+INTERSTITIAL_AD_CODE = """
+<!-- Interstitial Ad Code Go Here -->
+"""
+
+# 3. Banner Ad Code (ከ Adsterra/AdSense የ Banner HTML/Script ስታመጣ እዚህ ለጥፈው)
+BANNER_AD_CODE = """
+<div style="text-align: center; margin: 15px 0; min-height: 60px; background: #ffffff; padding: 5px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+    <span style="font-size: 9px; color: #999; display: block; margin-bottom: 2px;">SPONSORED AD</span>
+    <!-- የ Banner Script/Iframe እዚህ ቦታ ይገባል -->
+    <div style="font-size: 12px; color: #777;">[ Banner Ad Space ]</div>
+</div>
+"""
+# ---------------------------------------------------------
+
 def extract_league_name(event):
     comps = event.get('competitions', [])
     if comps:
@@ -129,8 +152,7 @@ def home():
     <head>
         <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Koki Score - Live Football</title>
-        """ + PWA_HEADER + """
-        <script type="text/javascript" src="https://pl30518340.effectivecpmnetwork.com/8c/d4/6b/8cd46b5b8dc5c8760a2063e5f3663df5.js"></script>
+        """ + PWA_HEADER + SOCIAL_BAR_CODE + INTERSTITIAL_AD_CODE + """
         <style>
             body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f6f9; margin: 0; padding: 0; }
             .top-bar { background: #0d47a1; color: white; padding: 14px; text-align: center; font-size: 18px; font-weight: bold; }
@@ -191,6 +213,8 @@ def home():
             {% else %}
             <p style="text-align:center; color: #777; padding: 20px;">No matches found for the selected date.</p>
             {% endfor %}
+            
+            """ + BANNER_AD_CODE + """
         </div>
         """ + PWA_SCRIPT + """
     </body>
@@ -253,8 +277,7 @@ def match_details(match_id):
     <head>
         <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>{{ match.home }} vs {{ match.away }} - Koki Score</title>
-        """ + PWA_HEADER + """
-        <script type="text/javascript" src="https://pl30518340.effectivecpmnetwork.com/8c/d4/6b/8cd46b5b8dc5c8760a2063e5f3663df5.js"></script>
+        """ + PWA_HEADER + SOCIAL_BAR_CODE + INTERSTITIAL_AD_CODE + """
         <style>
             body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f6f9; margin: 0; padding: 0; }
             .top-bar { background: #0d47a1; color: white; padding: 14px; text-align: center; font-size: 18px; font-weight: bold; }
@@ -285,6 +308,8 @@ def match_details(match_id):
                 </div>
                 <div class="status-text">STATUS: {{ match.status }}</div>
             </div>
+
+            """ + BANNER_AD_CODE + """
 
             <div class="card">
                 <div class="section-title">⚽ GOAL EVENTS & TIMELINE</div>
@@ -371,8 +396,7 @@ def standings():
     <head>
         <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>League Standings - Koki Score</title>
-        """ + PWA_HEADER + """
-        <script type="text/javascript" src="https://pl30518340.effectivecpmnetwork.com/8c/d4/6b/8cd46b5b8dc5c8760a2063e5f3663df5.js"></script>
+        """ + PWA_HEADER + SOCIAL_BAR_CODE + INTERSTITIAL_AD_CODE + """
         <style>
             body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f6f9; margin: 0; padding: 0; }
             .top-bar { background: #0d47a1; color: white; padding: 14px; text-align: center; font-size: 18px; font-weight: bold; }
@@ -441,6 +465,8 @@ def standings():
                     {% endfor %}
                 </tbody>
             </table>
+
+            """ + BANNER_AD_CODE + """
         </div>
         """ + PWA_SCRIPT + """
     </body>
@@ -490,8 +516,7 @@ def topscorers():
     <head>
         <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Top Scorers - Koki Score</title>
-        """ + PWA_HEADER + """
-        <script type="text/javascript" src="https://pl30518340.effectivecpmnetwork.com/8c/d4/6b/8cd46b5b8dc5c8760a2063e5f3663df5.js"></script>
+        """ + PWA_HEADER + SOCIAL_BAR_CODE + INTERSTITIAL_AD_CODE + """
         <style>
             body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f6f9; margin: 0; padding: 0; }
             .top-bar { background: #0d47a1; color: white; padding: 14px; text-align: center; font-size: 18px; font-weight: bold; }
@@ -547,6 +572,8 @@ def topscorers():
                     No top scorers data currently available for this league.
                 </div>
             {% endif %}
+
+            """ + BANNER_AD_CODE + """
         </div>
         """ + PWA_SCRIPT + """
     </body>
