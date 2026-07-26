@@ -46,6 +46,7 @@ def home():
                     status = "UPCOMING"
 
                 matches.append({
+                    "id": event.get('id'),
                     "league": event.get('season', {}).get('slug', 'Football Match'),
                     "home": home_team['team']['displayName'],
                     "home_logo": home_team['team'].get('logo', ''),
@@ -75,13 +76,13 @@ def home():
             .date-picker { background: white; padding: 10px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
             .date-picker input { padding: 8px 14px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; outline: none; font-weight: bold; color: #0d47a1; }
             .container { padding: 10px; max-width: 600px; margin: auto; }
-            .match-card { background: white; border-radius: 10px; padding: 12px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.03); }
+            .match-card { background: white; border-radius: 10px; padding: 12px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.03); display: block; text-decoration: none; color: inherit; }
             .match-header { font-size: 11px; color: #666; text-transform: uppercase; margin-bottom: 8px; font-weight: bold; }
             .teams { display: flex; justify-content: space-between; align-items: center; }
             .team { display: flex; align-items: center; width: 40%; }
             .team.away { justify-content: flex-end; }
             .logo { width: 24px; height: 24px; margin: 0 6px; object-fit: contain; }
-            .score { font-size: 18px; font-weight: bold; background: #eee; padding: 4px 10px; border-radius: 6px; }
+            .score { font-size: 18px; font-weight: bold; background: #0d47a1; color: white; padding: 4px 10px; border-radius: 6px; }
             .badge { font-size: 10px; padding: 3px 6px; border-radius: 4px; font-weight: bold; display: inline-block; }
             .LIVE { background: #ffebee; color: #c62828; }
             .FINISHED { background: #e8f5e9; color: #2e7d32; }
@@ -102,7 +103,7 @@ def home():
         </div>
         <div class="container">
             {% for m in matches %}
-            <div class="match-card">
+            <a href="/match/{{ m.id }}" class="match-card">
                 <div class="match-header">
                     <span class="badge {{ m.status }}">{{ m.status }}</span> • {{ m.detail }}
                 </div>
@@ -117,7 +118,7 @@ def home():
                         <img class="logo" src="{{ m.away_logo }}" onerror="this.style.display='none'">
                     </div>
                 </div>
-            </div>
+            </a>
             {% else %}
             <p style="text-align:center; color: #777; padding: 20px;">No matches found for the selected date.</p>
             {% endfor %}
@@ -125,6 +126,124 @@ def home():
     </body>
     </html>
     """, matches=matches, selected_date=selected_date)
+
+
+@app.route('/match/<match_id>')
+def match_details(match_id):
+    url = f"https://site.api.espn.com/apis/site/v2/sports/soccer/all/summary?event={match_id}"
+    match_data = {}
+    events = []
+    stats = []
+    
+    try:
+        res = requests.get(url, timeout=5)
+        if res.status_code == 200:
+            data = res.json()
+            header = data.get('header', {}).get('competitions', [{}])[0]
+            home_team = header.get('competitors', [{}])[0]
+            away_team = header.get('competitors', [{}])[1]
+            
+            match_data = {
+                "league": data.get('header', {}).get('league', {}).get('name', 'Football Match'),
+                "home": home_team.get('team', {}).get('displayName', 'Home'),
+                "home_score": home_team.get('score', '0'),
+                "away": away_team.get('team', {}).get('displayName', 'Away'),
+                "away_score": away_team.get('score', '0'),
+                "status": header.get('status', {}).get('type', {}).get('shortDetail', 'FT')
+            }
+            
+            # Key Details & Timeline
+            key_events = data.get('keyEvents', [])
+            for k in key_events:
+                events.append({
+                    "time": k.get('clock', {}).get('displayValue', ''),
+                    "text": k.get('text', ''),
+                    "type": k.get('type', {}).get('text', '')
+                })
+
+            # Match Stats
+            boxscore = data.get('boxscore', {}).get('teams', [])
+            if len(boxscore) == 2:
+                home_stats = {s['name']: s['displayValue'] for s in boxscore[0].get('statistics', [])}
+                away_stats = {s['name']: s['displayValue'] for s in boxscore[1].get('statistics', [])}
+                
+                all_keys = set(home_stats.keys()).union(set(away_stats.keys()))
+                for k in sorted(all_keys):
+                    stats.append({
+                        "name": k.replace('label', '').replace('%', ' %').upper(),
+                        "home": home_stats.get(k, '-'),
+                        "away": away_stats.get(k, '-')
+                    })
+    except Exception as e:
+        print("Match detail error:", e)
+
+    return render_template_string("""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{{ match.home }} vs {{ match.away }} - Koki Score</title>
+        <script type="text/javascript" src="https://pl30518340.effectivecpmnetwork.com/8c/d4/6b/8cd46b5b8dc5c8760a2063e5f3663df5.js"></script>
+        <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f6f9; margin: 0; padding: 0; }
+            .top-bar { background: #0d47a1; color: white; padding: 14px; text-align: center; font-size: 18px; font-weight: bold; }
+            .container { padding: 12px; max-width: 600px; margin: auto; }
+            .back-btn { display: inline-block; margin-bottom: 12px; color: #0d47a1; text-decoration: none; font-weight: bold; font-size: 14px; }
+            .card { background: white; border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.03); }
+            .header-league { text-align: center; font-size: 11px; background: #e3f2fd; color: #0d47a1; font-weight: bold; padding: 4px 10px; border-radius: 12px; display: inline-block; margin: auto; }
+            .score-box { display: flex; justify-content: space-around; align-items: center; margin-top: 15px; text-align: center; }
+            .team-name { font-size: 16px; font-weight: bold; width: 35%; }
+            .score-num { font-size: 24px; font-weight: bold; background: #0d47a1; color: white; padding: 6px 16px; border-radius: 8px; }
+            .status-text { text-align: center; color: #c62828; font-size: 11px; font-weight: bold; margin-top: 8px; }
+            .section-title { font-size: 13px; font-weight: bold; color: #0d47a1; margin-bottom: 10px; border-bottom: 2px solid #e3f2fd; padding-bottom: 4px; }
+            .stat-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #f0f0f0; font-size: 12px; }
+            .stat-name { color: #555; font-weight: 500; }
+        </style>
+    </head>
+    <body>
+        <div class="top-bar">⚽ Koki Score Hub</div>
+        <div class="container">
+            <a href="/" class="back-btn">← Back to Matches</a>
+            
+            <div class="card" style="text-align: center;">
+                <div class="header-league">{{ match.league }}</div>
+                <div class="score-box">
+                    <div class="team-name">{{ match.home }}</div>
+                    <div class="score-num">{{ match.home_score }} - {{ match.away_score }}</div>
+                    <div class="team-name">{{ match.away }}</div>
+                </div>
+                <div class="status-text">STATUS: {{ match.status }}</div>
+            </div>
+
+            <div class="card">
+                <div class="section-title">⚽ GOAL EVENTS & TIMELINE</div>
+                {% if events %}
+                    {% for ev in events %}
+                        <div style="font-size: 12px; padding: 4px 0;"><b>{{ ev.time }}</b> - {{ ev.text }}</div>
+                    {% endfor %}
+                {% else %}
+                    <p style="font-size:12px; color: #777; text-align:center;">No match events or goals recorded for this game.</p>
+                {% endif %}
+            </div>
+
+            <div class="card">
+                <div class="section-title">📊 MATCH STATISTICS</div>
+                {% if stats %}
+                    {% for st in stats %}
+                        <div class="stat-row">
+                            <b>{{ st.home }}</b>
+                            <span class="stat-name">{{ st.name }}</span>
+                            <b>{{ st.away }}</b>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p style="font-size:12px; color: #777; text-align:center;">No detailed statistics available for this match.</p>
+                {% endif %}
+            </div>
+        </div>
+    </body>
+    </html>
+    """, match=match_data, events=events, stats=stats)
 
 
 @app.route('/standings')
@@ -139,32 +258,38 @@ def standings():
             data = res.json()
             entries = []
             
-            # 1. Primary path check
             if 'children' in data and len(data['children']) > 0:
-                entries = data['children'][0].get('standings', {}).get('entries', [])
-            # 2. Alternative direct path check
-            elif 'standings' in data:
-                entries = data.get('standings', {}).get('entries', [])
-                
+                for child in data['children']:
+                    if 'standings' in child and 'entries' in child['standings']:
+                        entries.extend(child['standings']['entries'])
+            elif 'standings' in data and 'entries' in data['standings']:
+                entries = data['standings']['entries']
+            
             for idx, item in enumerate(entries, start=1):
                 team = item.get('team', {})
-                stats = {s['name']: s['value'] for s in item.get('stats', [])}
+                stats_list = item.get('stats', [])
+                stats = {s.get('name'): s.get('value') for s in stats_list if 'name' in s}
                 
-                # Dynamic rank fallback
                 rank_val = stats.get('rank', idx)
-                if rank_val == 0 or not rank_val:
+                if not rank_val:
                     rank_val = idx
 
                 standings_data.append({
                     "rank": int(rank_val),
-                    "team": team.get('displayName', ''),
+                    "team": team.get('displayName', 'Team'),
                     "logo": team.get('logos', [{}])[0].get('href', '') if team.get('logos') else '',
                     "played": int(stats.get('gamesPlayed', 0)),
                     "wins": int(stats.get('wins', 0)),
                     "draws": int(stats.get('ties', 0)),
                     "losses": int(stats.get('losses', 0)),
+                    "gf": int(stats.get('pointsFor', 0)),
+                    "ga": int(stats.get('pointsAgainst', 0)),
+                    "gd": int(stats.get('pointDifferential', 0)),
                     "pts": int(stats.get('points', 0))
                 })
+                
+            standings_data = sorted(standings_data, key=lambda x: x['rank'])
+            
     except Exception as e:
         print("Standings Error:", e)
 
@@ -173,7 +298,7 @@ def standings():
     <html>
     <head>
         <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Standings - Koki Score</title>
+        <title>League Standings - Koki Score</title>
         <script type="text/javascript" src="https://pl30518340.effectivecpmnetwork.com/8c/d4/6b/8cd46b5b8dc5c8760a2063e5f3663df5.js"></script>
         <style>
             body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f6f9; margin: 0; padding: 0; }
@@ -185,15 +310,16 @@ def standings():
             .league-btn { color: #bbdefb; text-decoration: none; padding: 6px 12px; font-size: 12px; font-weight: bold; border-radius: 15px; white-space: nowrap; margin-right: 5px; }
             .league-btn.active { background: #ffeb3b; color: #0d47a1; }
             .container { padding: 10px; max-width: 600px; margin: auto; }
-            table { width: 100%; background: white; border-collapse: collapse; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.03); font-size: 13px; }
-            th { background: #e3f2fd; color: #0d47a1; padding: 10px; text-align: center; }
-            td { padding: 10px; text-align: center; border-bottom: 1px solid #eee; }
-            .team-cell { display: flex; align-items: center; text-align: left; }
-            .team-logo { width: 20px; height: 20px; margin-right: 8px; object-fit: contain; }
+            table { width: 100%; background: white; border-collapse: collapse; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.03); font-size: 12px; }
+            th { background: #f0f4f8; color: #333; padding: 8px 4px; text-align: center; font-weight: bold; }
+            td { padding: 8px 4px; text-align: center; border-bottom: 1px solid #eee; }
+            .team-cell { display: flex; align-items: center; text-align: left; font-weight: bold; color: #111; }
+            .team-logo { width: 18px; height: 18px; margin-right: 6px; object-fit: contain; }
+            .pts-col { background: #e3f2fd; font-weight: bold; color: #0d47a1; }
         </style>
     </head>
     <body>
-        <div class="top-bar">📊 League Standings</div>
+        <div class="top-bar">⚽ League Standings</div>
         <div class="nav-menu">
             <a href="/" class="nav-link">🏟️ Matches</a>
             <a href="/standings" class="nav-link active">📊 Standings</a>
@@ -209,18 +335,21 @@ def standings():
                 <thead>
                     <tr>
                         <th>#</th>
-                        <th style="text-align:left;">Team</th>
+                        <th style="text-align:left;">TEAM</th>
                         <th>P</th>
                         <th>W</th>
                         <th>D</th>
                         <th>L</th>
-                        <th><b>PTS</b></th>
+                        <th>F</th>
+                        <th>A</th>
+                        <th>GD</th>
+                        <th class="pts-col">PTS</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for row in standings %}
                     <tr>
-                        <td><b>{{ row.rank }}</b></td>
+                        <td style="color:#0d47a1; font-weight:bold;">{{ row.rank }}</td>
                         <td class="team-cell">
                             {% if row.logo %}<img src="{{ row.logo }}" class="team-logo">{% endif %}
                             <span>{{ row.team }}</span>
@@ -229,10 +358,13 @@ def standings():
                         <td>{{ row.wins }}</td>
                         <td>{{ row.draws }}</td>
                         <td>{{ row.losses }}</td>
-                        <td><b>{{ row.pts }}</b></td>
+                        <td>{{ row.gf }}</td>
+                        <td>{{ row.ga }}</td>
+                        <td>{{ row.gd }}</td>
+                        <td class="pts-col">{{ row.pts }}</td>
                     </tr>
                     {% else %}
-                    <tr><td colspan="7">No standings data available currently.</td></tr>
+                    <tr><td colspan="10">No standings data available currently.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
@@ -248,7 +380,6 @@ def topscorers():
     scorers_data = []
     
     try:
-        # 1. Leaders Endpoint
         url = f"https://site.api.espn.com/apis/v2/sports/soccer/{league_code}/leaders"
         res = requests.get(url, timeout=5)
         
@@ -257,7 +388,6 @@ def topscorers():
             categories = data.get('leaders', [])
             
             goals_category = next((c for c in categories if c.get('name') in ['goals', 'scoring'] or 'goal' in c.get('displayName', '').lower()), None)
-            
             if not goals_category and len(categories) > 0:
                 goals_category = categories[0]
                 
@@ -277,26 +407,6 @@ def topscorers():
                         "headshot": headshot,
                         "goals": int(goals)
                     })
-                    
-        # 2. Fallback to Statistics Endpoint if leaders is empty
-        if not scorers_data:
-            stat_url = f"https://site.api.espn.com/apis/site/v2/sports/soccer/{league_code}/statistics"
-            s_res = requests.get(stat_url, timeout=5)
-            if s_res.status_code == 200:
-                s_data = s_res.json()
-                stats_categories = s_data.get('stats', {}).get('categories', [])
-                goals_stat = next((sc for sc in stats_categories if sc.get('name') in ['offense', 'goals', 'scoring']), None)
-                if goals_stat:
-                    for idx, athlete_stat in enumerate(goals_stat.get('athletes', [])[:20], start=1):
-                        ath = athlete_stat.get('athlete', {})
-                        scorers_data.append({
-                            "rank": idx,
-                            "name": ath.get('displayName', 'Player'),
-                            "team": ath.get('team', {}).get('displayName', ''),
-                            "headshot": ath.get('headshot', ''),
-                            "goals": int(athlete_stat.get('value', 0))
-                        })
-
     except Exception as e:
         print("Top Scorers Error:", e)
 
