@@ -5,12 +5,14 @@ import os
 
 app = Flask(__name__)
 
+# የተጠቃሚውን ዋና ዋና ሊጎች እና አሁን የሚደረጉትን ጨዋታዎች የሚያካትቱ ቁልፍ ቃላት
 ALLOWED_KEYWORDS = [
     "PREMIER LEAGUE", "ETHIOPIAN", "SERIE A", "BUNDESLIGA", 
     "LIGUE 1", "LALIGA", "LA LIGA", "CHAMPIONS LEAGUE", 
     "SUPER LIG", "PRO LEAGUE", "WORLD CUP", "MLS", "ARGENTINA"
 ]
 
+# ለ Standings የሚያገለግሉ የሊግ Slug ቁልፎች
 LEAGUES_MAP = {
     "eng.1": "English Premier League",
     "esp.1": "Spanish La Liga",
@@ -291,21 +293,20 @@ def standings():
                 
                 stats = {s.get('name'): s.get('value') for s in entry.get('stats', [])}
                 
-                try:
-                    rank_val = int(float(stats.get('rank', 0)))
-                except:
-                    rank_val = '-'
-                    
                 table_data.append({
-                    "rank": rank_val,
                     "team": team_name,
                     "logo": logo,
                     "p": int(float(stats.get('gamesPlayed', 0))),
+                    "w": int(float(stats.get('wins', 0))),
+                    "d": int(float(stats.get('ties', 0))),
+                    "l": int(float(stats.get('losses', 0))),
+                    "gf": int(float(stats.get('pointsFor', 0))),
+                    "ga": int(float(stats.get('pointsAgainst', 0))),
                     "gd": int(float(stats.get('pointDifferential', 0))),
                     "pts": int(float(stats.get('points', 0)))
                 })
                 
-            table_data.sort(key=lambda x: (x['pts'], x['gd']), reverse=True)
+            table_data.sort(key=lambda x: (x['pts'], x['gd'], x['gf']), reverse=True)
             
             for idx, item in enumerate(table_data, start=1):
                 item['rank'] = idx
@@ -329,15 +330,15 @@ def standings():
             .league-selector { display: flex; overflow-x: auto; background: #1565c0; padding: 8px; scrollbar-width: none; }
             .league-btn { color: #bbdefb; text-decoration: none; padding: 6px 12px; font-size: 12px; font-weight: bold; border-radius: 15px; white-space: nowrap; margin-right: 5px; }
             .league-btn.active { background: #ffeb3b; color: #0d47a1; }
-            .container { padding: 12px; max-width: 600px; margin: auto; }
-            .table-card { background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-            table { width: 100%; border-collapse: collapse; font-size: 13px; }
-            th { background: #f1f3f5; color: #444; padding: 10px 6px; text-align: center; font-size: 11px; }
-            td { padding: 10px 6px; border-bottom: 1px solid #eee; text-align: center; }
-            .team-td { text-align: left; display: flex; align-items: center; font-weight: 600; }
-            .team-logo { width: 18px; height: 18px; margin-right: 8px; }
-            .rank { font-weight: bold; color: #0d47a1; width: 25px; }
-            .pts { font-weight: bold; color: #000; background: #f8f9fa; }
+            .container { padding: 10px 5px; max-width: 600px; margin: auto; }
+            .table-card { background: white; border-radius: 10px; overflow-x: auto; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+            table { width: 100%; border-collapse: collapse; font-size: 12px; white-space: nowrap; }
+            th { background: #f1f3f5; color: #444; padding: 8px 4px; text-align: center; font-size: 10px; text-transform: uppercase; }
+            td { padding: 8px 4px; border-bottom: 1px solid #eee; text-align: center; }
+            .team-td { text-align: left; display: flex; align-items: center; font-weight: 600; max-width: 130px; overflow: hidden; text-overflow: ellipsis; }
+            .team-logo { width: 16px; height: 16px; margin-right: 6px; flex-shrink: 0; }
+            .rank { font-weight: bold; color: #0d47a1; width: 20px; }
+            .pts { font-weight: bold; color: #000; background: #e3f2fd; }
         </style>
     </head>
     <body>
@@ -359,6 +360,11 @@ def standings():
                             <th>#</th>
                             <th style="text-align: left;">Team</th>
                             <th>P</th>
+                            <th>W</th>
+                            <th>D</th>
+                            <th>L</th>
+                            <th>F</th>
+                            <th>A</th>
                             <th>GD</th>
                             <th>PTS</th>
                         </tr>
@@ -370,15 +376,20 @@ def standings():
                                 <td class="rank">{{ row.rank }}</td>
                                 <td class="team-td">
                                     {% if row.logo %}<img src="{{ row.logo }}" class="team-logo">{% endif %}
-                                    {{ row.team }}
+                                    <span>{{ row.team }}</span>
                                 </td>
                                 <td>{{ row.p }}</td>
-                                <td>{{ row.gd }}</td>
+                                <td>{{ row.w }}</td>
+                                <td>{{ row.d }}</td>
+                                <td>{{ row.l }}</td>
+                                <td>{{ row.gf }}</td>
+                                <td>{{ row.ga }}</td>
+                                <td>{% if row.gd > 0 %}+{{ row.gd }}{% else %}{{ row.gd }}{% endif %}</td>
                                 <td class="pts">{{ row.pts }}</td>
                             </tr>
                             {% endfor %}
                         {% else %}
-                            <tr><td colspan="5" style="padding: 20px; color: #777;">No standings available for this league.</td></tr>
+                            <tr><td colspan="10" style="padding: 20px; color: #777;">No standings available for this league.</td></tr>
                         {% endif %}
                     </tbody>
                 </table>
