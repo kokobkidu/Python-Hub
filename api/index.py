@@ -1,7 +1,7 @@
 import os
 import requests
 from datetime import datetime
-from flask import Flask, render_template_string, request
+from flask import Flask, render_template_string, request, send_from_directory
 
 app = Flask(__name__)
 
@@ -18,8 +18,6 @@ LEAGUES_MAP = {
 }
 
 def extract_league_name(event):
-    """ከ ESPN API የሊጉን ወይም የውድድሩን ትክክለኛ ስም ማውጫ"""
-    # Option 1: competitions -> league -> name / abbreviation
     comps = event.get('competitions', [])
     if comps:
         lg = comps[0].get('league', {})
@@ -28,19 +26,57 @@ def extract_league_name(event):
         if lg.get('abbreviation'):
             return lg.get('abbreviation')
 
-    # Option 2: Direct event -> league
     evt_lg = event.get('league', {})
     if evt_lg.get('name'):
         return evt_lg.get('name')
     if evt_lg.get('displayName'):
         return evt_lg.get('displayName')
 
-    # Option 3: Season Slug
     season_slug = event.get('season', {}).get('slug', '')
     if season_slug:
         return season_slug.replace('-', ' ').title()
 
     return "Soccer Match"
+
+@app.route('/manifest.json')
+def serve_manifest():
+    return send_from_directory('static', 'manifest.json')
+
+PWA_HEADER = """
+        <link rel="manifest" href="/manifest.json">
+        <meta name="theme-color" content="#0d47a1">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+        <meta name="apple-mobile-web-app-title" content="Koki Score">
+        <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/53/53283.png">
+"""
+
+PWA_SCRIPT = """
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/sw.js').then(function(reg) {
+            console.log('ServiceWorker registered:', reg);
+          }).catch(function(err) {
+            console.log('ServiceWorker registration failed:', err);
+          });
+        });
+      }
+    </script>
+"""
+
+@app.route('/sw.js')
+def serve_sw():
+    sw_code = """
+    self.addEventListener('install', function(e) {
+      self.skipWaiting();
+    });
+    self.addEventListener('fetch', function(e) {
+      e.respondWith(fetch(e.request));
+    });
+    """
+    return sw_code, 200, {'Content-Type': 'application/javascript'}
 
 @app.route('/')
 def home():
@@ -70,7 +106,6 @@ def home():
                 else:
                     status = "UPCOMING"
 
-                # የሊጉን ስም በትክክል ማውጫ
                 league_name = extract_league_name(event)
 
                 matches.append({
@@ -94,6 +129,7 @@ def home():
     <head>
         <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Koki Score - Live Football</title>
+        """ + PWA_HEADER + """
         <script type="text/javascript" src="https://pl30518340.effectivecpmnetwork.com/8c/d4/6b/8cd46b5b8dc5c8760a2063e5f3663df5.js"></script>
         <style>
             body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f6f9; margin: 0; padding: 0; }
@@ -156,6 +192,7 @@ def home():
             <p style="text-align:center; color: #777; padding: 20px;">No matches found for the selected date.</p>
             {% endfor %}
         </div>
+        """ + PWA_SCRIPT + """
     </body>
     </html>
     """, matches=matches, selected_date=selected_date)
@@ -187,7 +224,6 @@ def match_details(match_id):
                 "status": header.get('status', {}).get('type', {}).get('shortDetail', 'FT')
             }
             
-            # Key Details & Timeline
             key_events = data.get('keyEvents', [])
             for k in key_events:
                 events.append({
@@ -196,7 +232,6 @@ def match_details(match_id):
                     "type": k.get('type', {}).get('text', '')
                 })
 
-            # Match Stats
             boxscore = data.get('boxscore', {}).get('teams', [])
             if len(boxscore) == 2:
                 home_stats = {s['name']: s['displayValue'] for s in boxscore[0].get('statistics', [])}
@@ -218,6 +253,7 @@ def match_details(match_id):
     <head>
         <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>{{ match.home }} vs {{ match.away }} - Koki Score</title>
+        """ + PWA_HEADER + """
         <script type="text/javascript" src="https://pl30518340.effectivecpmnetwork.com/8c/d4/6b/8cd46b5b8dc5c8760a2063e5f3663df5.js"></script>
         <style>
             body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f6f9; margin: 0; padding: 0; }
@@ -276,6 +312,7 @@ def match_details(match_id):
                 {% endif %}
             </div>
         </div>
+        """ + PWA_SCRIPT + """
     </body>
     </html>
     """, match=match_data, events=events, stats=stats)
@@ -334,6 +371,7 @@ def standings():
     <head>
         <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>League Standings - Koki Score</title>
+        """ + PWA_HEADER + """
         <script type="text/javascript" src="https://pl30518340.effectivecpmnetwork.com/8c/d4/6b/8cd46b5b8dc5c8760a2063e5f3663df5.js"></script>
         <style>
             body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f6f9; margin: 0; padding: 0; }
@@ -404,6 +442,7 @@ def standings():
                 </tbody>
             </table>
         </div>
+        """ + PWA_SCRIPT + """
     </body>
     </html>
     """, standings=standings_data, leagues=LEAGUES_MAP, selected_league=league_code)
@@ -451,6 +490,7 @@ def topscorers():
     <head>
         <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Top Scorers - Koki Score</title>
+        """ + PWA_HEADER + """
         <script type="text/javascript" src="https://pl30518340.effectivecpmnetwork.com/8c/d4/6b/8cd46b5b8dc5c8760a2063e5f3663df5.js"></script>
         <style>
             body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f6f9; margin: 0; padding: 0; }
@@ -508,6 +548,7 @@ def topscorers():
                 </div>
             {% endif %}
         </div>
+        """ + PWA_SCRIPT + """
     </body>
     </html>
     """, scorers=scorers_data, leagues=LEAGUES_MAP, selected_league=league_code)
