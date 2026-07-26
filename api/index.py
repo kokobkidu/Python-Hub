@@ -5,14 +5,14 @@ import os
 
 app = Flask(__name__)
 
-# የተጠቃሚውን ዋና ዋና ሊጎች እና አሁን የሚደረጉትን ጨዋታዎች የሚያካትቱ ቁልፍ ቃላት
+# ቁልፍ ቃላት
 ALLOWED_KEYWORDS = [
     "PREMIER LEAGUE", "ETHIOPIAN", "SERIE A", "BUNDESLIGA", 
     "LIGUE 1", "LALIGA", "LA LIGA", "CHAMPIONS LEAGUE", 
     "SUPER LIG", "PRO LEAGUE", "WORLD CUP", "MLS", "ARGENTINA"
 ]
 
-# ለ Standings የሚያገለግሉ የሊግ Slug ቁልፎች
+# የሊጎች ዝርዝር
 LEAGUES_MAP = {
     "eng.1": "English Premier League",
     "esp.1": "Spanish La Liga",
@@ -135,8 +135,8 @@ def home():
                 <style>
                     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f6f9; margin: 0; padding: 0; }
                     .top-bar { background: #0d47a1; color: white; padding: 14px; text-align: center; font-size: 18px; font-weight: bold; }
-                    .nav-menu { display: flex; justify-content: center; background: #0a3578; padding: 8px; }
-                    .nav-link { color: white; text-decoration: none; font-weight: bold; margin: 0 12px; font-size: 14px; }
+                    .nav-menu { display: flex; justify-content: center; background: #0a3578; padding: 8px; flex-wrap: wrap; }
+                    .nav-link { color: white; text-decoration: none; font-weight: bold; margin: 4px 8px; font-size: 13px; }
                     .back-btn { display: inline-block; margin: 12px 15px; color: #0d47a1; text-decoration: none; font-weight: bold; font-size: 14px; }
                     .container { padding: 0 15px 20px 15px; max-width: 600px; margin: auto; }
                     .match-header-card { background: white; border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
@@ -157,6 +157,7 @@ def home():
                 <div class="nav-menu">
                     <a href="/" class="nav-link">🏟️ Matches</a>
                     <a href="/standings" class="nav-link">📊 Standings</a>
+                    <a href="/topscorers" class="nav-link">⚽ Top Scorers</a>
                 </div>
                 <div style="max-width: 600px; margin: auto;"><a href="/?date={{ date }}" class="back-btn">⬅ Back to Matches</a></div>
                 <div class="container">
@@ -212,8 +213,8 @@ def home():
         <style>
             body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f4f6f9; margin: 0; padding: 0; }}
             .top-bar {{ background-color: #0d47a1; color: white; padding: 14px; text-align: center; font-size: 18px; font-weight: bold; }}
-            .nav-menu {{ display: flex; justify-content: center; background-color: #0a3578; padding: 8px; }}
-            .nav-link {{ color: white; text-decoration: none; font-weight: bold; margin: 0 12px; font-size: 14px; opacity: 0.9; }}
+            .nav-menu {{ display: flex; justify-content: center; background-color: #0a3578; padding: 8px; flex-wrap: wrap; }}
+            .nav-link {{ color: white; text-decoration: none; font-weight: bold; margin: 4px 8px; font-size: 13px; opacity: 0.9; }}
             .nav-link.active {{ border-bottom: 2px solid #ffeb3b; color: #ffeb3b; }}
             .date-tabs {{ display: flex; background-color: #1565c0; overflow-x: auto; white-space: nowrap; scrollbar-width: none; padding: 0 5px; }}
             .date-tabs::-webkit-scrollbar {{ display: none; }}
@@ -235,6 +236,7 @@ def home():
         <div class="nav-menu">
             <a href="/" class="nav-link active">🏟️ Matches</a>
             <a href="/standings" class="nav-link">📊 Standings</a>
+            <a href="/topscorers" class="nav-link">⚽ Top Scorers</a>
         </div>
         <div class="date-tabs">
     """
@@ -324,8 +326,8 @@ def standings():
         <style>
             body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f6f9; margin: 0; padding: 0; }
             .top-bar { background: #0d47a1; color: white; padding: 14px; text-align: center; font-size: 18px; font-weight: bold; }
-            .nav-menu { display: flex; justify-content: center; background: #0a3578; padding: 8px; }
-            .nav-link { color: white; text-decoration: none; font-weight: bold; margin: 0 12px; font-size: 14px; opacity: 0.9; }
+            .nav-menu { display: flex; justify-content: center; background: #0a3578; padding: 8px; flex-wrap: wrap; }
+            .nav-link { color: white; text-decoration: none; font-weight: bold; margin: 4px 8px; font-size: 13px; opacity: 0.9; }
             .nav-link.active { border-bottom: 2px solid #ffeb3b; color: #ffeb3b; }
             .league-selector { display: flex; overflow-x: auto; background: #1565c0; padding: 8px; scrollbar-width: none; }
             .league-btn { color: #bbdefb; text-decoration: none; padding: 6px 12px; font-size: 12px; font-weight: bold; border-radius: 15px; white-space: nowrap; margin-right: 5px; }
@@ -346,6 +348,7 @@ def standings():
         <div class="nav-menu">
             <a href="/" class="nav-link">🏟️ Matches</a>
             <a href="/standings" class="nav-link active">📊 Standings</a>
+            <a href="/topscorers" class="nav-link">⚽ Top Scorers</a>
         </div>
         <div class="league-selector">
             {% for code, name in leagues.items() %}
@@ -398,6 +401,114 @@ def standings():
     </body>
     </html>
     """, table=table_data, leagues=LEAGUES_MAP, selected_league=league_code)
+
+
+# -------------------------------------------------------------
+# 🔥 ደረጃ 1፡ TOP SCORERS ROUTE (የከፍተኛ ጎል አገባቢዎች ሰንጠረዥ)
+# -------------------------------------------------------------
+@app.route('/topscorers')
+def topscorers():
+    league_code = request.args.get('league', 'eng.1')
+    scorers_data = []
+    
+    try:
+        url = f"https://site.api.espn.com/apis/v2/sports/soccer/{league_code}/leaders"
+        res = requests.get(url, timeout=5)
+        if res.status_code == 200:
+            data = res.json()
+            categories = data.get('leaders', [])
+            
+            # ጎል የሚያስቆጥሩትን Category መፈለግ (Goals)
+            goals_category = next((c for c in categories if c.get('name') == 'goals' or c.get('displayName') == 'Goals'), None)
+            if not goals_category and len(categories) > 0:
+                goals_category = categories[0]
+                
+            if goals_category:
+                leaders = goals_category.get('leaders', [])
+                for idx, leader in enumerate(leaders, start=1):
+                    athlete = leader.get('athlete', {})
+                    name = athlete.get('displayName', 'Player')
+                    headshot = athlete.get('headshot', '')
+                    team = athlete.get('team', {}).get('displayName', '')
+                    goals = leader.get('value', 0)
+                    
+                    scorers_data.append({
+                        "rank": idx,
+                        "name": name,
+                        "team": team,
+                        "headshot": headshot,
+                        "goals": int(goals)
+                    })
+    except Exception as e:
+        print("Top Scorers Error:", e)
+
+    return render_template_string("""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Top Scorers - Koki Score</title>
+        <script type="text/javascript" src="https://pl30518340.effectivecpmnetwork.com/8c/d4/6b/8cd46b5b8dc5c8760a2063e5f3663df5.js"></script>
+        <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f6f9; margin: 0; padding: 0; }
+            .top-bar { background: #0d47a1; color: white; padding: 14px; text-align: center; font-size: 18px; font-weight: bold; }
+            .nav-menu { display: flex; justify-content: center; background: #0a3578; padding: 8px; flex-wrap: wrap; }
+            .nav-link { color: white; text-decoration: none; font-weight: bold; margin: 4px 8px; font-size: 13px; opacity: 0.9; }
+            .nav-link.active { border-bottom: 2px solid #ffeb3b; color: #ffeb3b; }
+            .league-selector { display: flex; overflow-x: auto; background: #1565c0; padding: 8px; scrollbar-width: none; }
+            .league-btn { color: #bbdefb; text-decoration: none; padding: 6px 12px; font-size: 12px; font-weight: bold; border-radius: 15px; white-space: nowrap; margin-right: 5px; }
+            .league-btn.active { background: #ffeb3b; color: #0d47a1; }
+            .container { padding: 10px; max-width: 600px; margin: auto; }
+            .scorer-card { background: white; border-radius: 10px; padding: 10px 14px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 5px rgba(0,0,0,0.03); }
+            .rank { font-size: 16px; font-weight: bold; color: #0d47a1; width: 25px; }
+            .player-info { display: flex; align-items: center; flex-grow: 1; margin-left: 5px; }
+            .player-img { width: 38px; height: 38px; border-radius: 50%; background: #eee; margin-right: 10px; object-fit: cover; }
+            .player-name { font-size: 13px; font-weight: bold; color: #222; }
+            .player-team { font-size: 11px; color: #666; }
+            .goals-badge { background: #e3f2fd; color: #0d47a1; font-weight: bold; padding: 6px 12px; border-radius: 20px; font-size: 13px; }
+        </style>
+    </head>
+    <body>
+        <div class="top-bar">⚽ Top Scorers</div>
+        <div class="nav-menu">
+            <a href="/" class="nav-link">🏟️ Matches</a>
+            <a href="/standings" class="nav-link">📊 Standings</a>
+            <a href="/topscorers" class="nav-link active">⚽ Top Scorers</a>
+        </div>
+        <div class="league-selector">
+            {% for code, name in leagues.items() %}
+                <a href="/topscorers?league={{ code }}" class="league-btn {% if code == selected_league %}active{% endif %}">{{ name }}</a>
+            {% endfor %}
+        </div>
+        <div class="container">
+            {% if scorers %}
+                {% for player in scorers %}
+                <div class="scorer-card">
+                    <div class="rank">#{{ player.rank }}</div>
+                    <div class="player-info">
+                        {% if player.headshot %}
+                            <img src="{{ player.headshot }}" class="player-img" alt="">
+                        {% else %}
+                            <div class="player-img" style="display:flex;align-items:center;justify-content:center;font-size:18px;">👤</div>
+                        {% endif %}
+                        <div>
+                            <div class="player-name">{{ player.name }}</div>
+                            <div class="player-team">{{ player.team }}</div>
+                        </div>
+                    </div>
+                    <div class="goals-badge">⚽ {{ player.goals }} Goals</div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div style="text-align:center; padding: 30px; color: #777; background: white; border-radius: 10px;">
+                    No top scorers data available for this league currently.
+                </div>
+            {% endif %}
+        </div>
+    </body>
+    </html>
+    """, scorers=scorers_data, leagues=LEAGUES_MAP, selected_league=league_code)
+
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
