@@ -58,7 +58,6 @@ def extract_league_name(event):
 
 def format_kickoff_time(date_str):
     try:
-        # ESPN API usually returns ISO format e.g. "2026-07-26T19:00Z"
         dt = datetime.strptime(date_str, "%Y-%m-%dT%HZ")
     except ValueError:
         try:
@@ -66,7 +65,6 @@ def format_kickoff_time(date_str):
         except ValueError:
             return ""
     
-    # Convert UTC to East Africa Time (EAT - UTC+3)
     eat_time = dt + timedelta(hours=3)
     return eat_time.strftime("%I:%M %p")
 
@@ -75,6 +73,7 @@ def serve_manifest():
     return send_from_directory('static', 'manifest.json')
 
 PWA_HEADER = """
+        <meta name="monetag" content="b72518a18f41901b98370856df2d35f5">
         <link rel="manifest" href="/manifest.json">
         <meta name="theme-color" content="#0d47a1">
         <meta name="mobile-web-app-capable" content="yes">
@@ -131,7 +130,6 @@ def home():
                 status_state = event['status']['type']['state']
                 detail = event['status']['type']['shortDetail']
                 
-                # Kickoff time
                 event_date = event.get('date', '')
                 start_time = format_kickoff_time(event_date) if event_date else ""
 
