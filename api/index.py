@@ -74,6 +74,7 @@ def serve_manifest():
 
 PWA_HEADER = """
         <meta name="monetag" content="b72518a18f41901b98370856df2d35f5">
+        <script src="https://quge5.com/88/tag.min.js" data-zone="264817" async data-cfasync="false"></script>
         <link rel="manifest" href="/manifest.json">
         <meta name="theme-color" content="#0d47a1">
         <meta name="mobile-web-app-capable" content="yes">
