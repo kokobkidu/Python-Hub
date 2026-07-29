@@ -18,14 +18,10 @@ LEAGUES_MAP = {
 }
 
 # ---------------------------------------------------------
-# ADSTERRA AD CODES SECTION
+# AD CODES SECTION (Clean & User-friendly)
 # ---------------------------------------------------------
 SOCIAL_BAR_CODE = """
 <script type="text/javascript" src="https://pl30518340.effectivecpmnetwork.com/8c/d4/6b/8cd46b5b8dc5c8760a2063e5f3663df5.js"></script>
-"""
-
-INTERSTITIAL_AD_CODE = """
-<!-- Interstitial Ad Code -->
 """
 
 BANNER_AD_CODE = """
@@ -73,8 +69,6 @@ def serve_manifest():
     return send_from_directory('static', 'manifest.json')
 
 PWA_HEADER = """
-        <meta name="monetag" content="b72518a18f41901b98370856df2d35f5">
-        <script src="https://quge5.com/88/tag.min.js" data-zone="264817" async data-cfasync="false"></script>
         <link rel="manifest" href="/manifest.json">
         <meta name="theme-color" content="#0d47a1">
         <meta name="mobile-web-app-capable" content="yes">
@@ -167,7 +161,7 @@ def home():
     <head>
         <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Koki Score - Live Football</title>
-        """ + PWA_HEADER + SOCIAL_BAR_CODE + INTERSTITIAL_AD_CODE + """
+        """ + PWA_HEADER + SOCIAL_BAR_CODE + """
         <style>
             body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f6f9; margin: 0; padding: 0; }
             .top-bar { background: #0d47a1; color: white; padding: 14px; text-align: center; font-size: 18px; font-weight: bold; }
@@ -296,7 +290,7 @@ def match_details(match_id):
     <head>
         <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>{{ match.home }} vs {{ match.away }} - Koki Score</title>
-        """ + PWA_HEADER + SOCIAL_BAR_CODE + INTERSTITIAL_AD_CODE + """
+        """ + PWA_HEADER + SOCIAL_BAR_CODE + """
         <style>
             body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f6f9; margin: 0; padding: 0; }
             .top-bar { background: #0d47a1; color: white; padding: 14px; text-align: center; font-size: 18px; font-weight: bold; }
@@ -415,7 +409,7 @@ def standings():
     <head>
         <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>League Standings - Koki Score</title>
-        """ + PWA_HEADER + SOCIAL_BAR_CODE + INTERSTITIAL_AD_CODE + """
+        """ + PWA_HEADER + SOCIAL_BAR_CODE + """
         <style>
             body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f6f9; margin: 0; padding: 0; }
             .top-bar { background: #0d47a1; color: white; padding: 14px; text-align: center; font-size: 18px; font-weight: bold; }
@@ -535,7 +529,7 @@ def topscorers():
     <head>
         <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Top Scorers - Koki Score</title>
-        """ + PWA_HEADER + SOCIAL_BAR_CODE + INTERSTITIAL_AD_CODE + """
+        """ + PWA_HEADER + SOCIAL_BAR_CODE + """
         <style>
             body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f6f9; margin: 0; padding: 0; }
             .top-bar { background: #0d47a1; color: white; padding: 14px; text-align: center; font-size: 18px; font-weight: bold; }
