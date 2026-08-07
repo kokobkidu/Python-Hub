@@ -1,612 +1,542 @@
-import os
+from flask import Flask, render_template_string, jsonify, request
 import requests
-from datetime import datetime, timedelta
-from flask import Flask, render_template_string, request, send_from_directory
 
 app = Flask(__name__)
 
-LEAGUES_MAP = {
-    "eng.1": "English Premier League",
-    "esp.1": "Spanish La Liga",
-    "ita.1": "Italian Serie A",
-    "ger.1": "German Bundesliga",
-    "fra.1": "French Ligue 1",
-    "uefa.champions": "UEFA Champions League",
-    "saudi.1": "Saudi Pro League",
-    "bra.1": "Brazilian Série A",
-    "usa.1": "MLS"
-}
+# Free Sports API Endpoints
+SPORTS_API_BASE = "https://www.thesportsdb.com/api/v1/json/3"
 
-# ---------------------------------------------------------
-# ADSTERRA AD CODES SECTION
-# ---------------------------------------------------------
-SOCIAL_BAR_CODE = """
-<script type="text/javascript" src="https://pl30518340.effectivecpmnetwork.com/8c/d4/6b/8cd46b5b8dc5c8760a2063e5f3663df5.js"></script>
-"""
+HTML_TEMPLATE = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Koki Score - Live Football Updates</title>
+    <link rel="manifest" href="/static/manifest.json">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #0d47a1; /* Koki Score Original Blue */
+            --primary-dark: #002171;
+            --secondary-color: #1565c0;
+            --bg-color: #f4f6f9;
+            --card-bg: #ffffff;
+            --text-color: #212121;
+            --light-text: #666666;
+        }
 
-INTERSTITIAL_AD_CODE = """
-<!-- Interstitial Ad Code -->
-"""
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
 
-BANNER_AD_CODE = """
-<div style="text-align: center; margin: 15px 0; min-height: 50px;">
-    <!-- Banner Ad Code Space -->
-</div>
-"""
-# ---------------------------------------------------------
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            padding-bottom: 70px;
+            padding-top: 60px;
+        }
 
-def extract_league_name(event):
-    comps = event.get('competitions', [])
-    if comps:
-        lg = comps[0].get('league', {})
-        if lg.get('displayName'):
-            return lg.get('displayName')
-        if lg.get('name'):
-            return lg.get('name')
+        /* Top Header */
+        header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 56px;
+            background-color: var(--primary-color);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            z-index: 1000;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+        }
 
-    evt_lg = event.get('league', {})
-    if evt_lg.get('displayName'):
-        return evt_lg.get('displayName')
-    if evt_lg.get('name'):
-        return evt_lg.get('name')
+        header .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
 
-    season_slug = event.get('season', {}).get('slug', '')
-    if season_slug:
-        return season_slug.replace('-', ' ').title()
+        header .header-icons {
+            display: flex;
+            gap: 18px;
+            font-size: 1.1rem;
+        }
 
-    return "Football Match"
+        header i {
+            cursor: pointer;
+        }
 
-def format_kickoff_time(date_str):
-    if not date_str:
-        return ""
-    try:
-        clean_date = date_str.replace("Z", "+00:00")
-        dt = datetime.fromisoformat(clean_date)
-        eat_time = dt + timedelta(hours=3)
-        return eat_time.strftime("%I:%M %p")
-    except Exception:
-        return ""
+        /* Side Navigation Drawer */
+        .side-drawer {
+            position: fixed;
+            top: 0;
+            left: -290px;
+            width: 280px;
+            height: 100%;
+            background: white;
+            z-index: 2000;
+            transition: all 0.3s ease;
+            box-shadow: 3px 0 12px rgba(0,0,0,0.3);
+            overflow-y: auto;
+        }
 
-@app.route('/manifest.json')
-def serve_manifest():
-    return send_from_directory('static', 'manifest.json')
+        .side-drawer.active {
+            left: 0;
+        }
 
-PWA_HEADER = """
-        <link rel="manifest" href="/manifest.json">
-        <meta name="theme-color" content="#0d47a1">
-        <meta name="mobile-web-app-capable" content="yes">
-        <meta name="apple-mobile-web-app-capable" content="yes">
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-        <meta name="apple-mobile-web-app-title" content="Koki Score">
-        <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/53/53283.png">
-"""
+        .drawer-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            z-index: 1500;
+        }
 
-PWA_SCRIPT = """
+        .drawer-overlay.active {
+            display: block;
+        }
+
+        .drawer-header {
+            padding: 24px 20px;
+            background: var(--primary-color);
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .drawer-menu {
+            list-style: none;
+            padding: 10px 0;
+        }
+
+        .drawer-menu li a {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 13px 20px;
+            color: var(--text-color);
+            text-decoration: none;
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        .drawer-menu li a:hover {
+            background: #e3f2fd;
+            color: var(--primary-color);
+        }
+
+        .drawer-divider {
+            height: 1px;
+            background: #e0e0e0;
+            margin: 8px 0;
+        }
+
+        /* Date Sub-Bar for Matches */
+        .date-bar {
+            display: flex;
+            justify-content: space-around;
+            background: var(--primary-dark);
+            color: white;
+            padding: 10px 5px;
+            font-size: 0.8rem;
+            margin: -10px -10px 12px -10px;
+            font-weight: 600;
+        }
+
+        .date-item {
+            padding: 4px 10px;
+            border-radius: 12px;
+            cursor: pointer;
+            opacity: 0.8;
+        }
+
+        .date-item.active {
+            background: #ffffff;
+            color: var(--primary-dark);
+            opacity: 1;
+        }
+
+        /* Bottom Navigation Bar */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background-color: #ffffff;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            border-top: 1px solid #e0e0e0;
+            z-index: 1000;
+            box-shadow: 0 -1px 4px rgba(0,0,0,0.08);
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #757575;
+            text-decoration: none;
+            font-size: 0.72rem;
+            cursor: pointer;
+            width: 20%;
+        }
+
+        .nav-item i {
+            font-size: 1.25rem;
+            margin-bottom: 3px;
+        }
+
+        .nav-item.active {
+            color: var(--primary-color);
+            font-weight: bold;
+        }
+
+        /* Container Tab Views */
+        .tab-content {
+            display: none;
+            padding: 10px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Matches Card UI */
+        .league-card {
+            background: white;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .league-header {
+            background: #e3f2fd;
+            padding: 8px 12px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            color: var(--primary-dark);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .match-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 12px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .match-row:last-child {
+            border-bottom: none;
+        }
+
+        .team-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            width: 40%;
+        }
+
+        .team-info.away {
+            justify-content: flex-end;
+            text-align: right;
+        }
+
+        .team-badge {
+            width: 24px;
+            height: 24px;
+            object-fit: contain;
+        }
+
+        .match-score {
+            font-weight: bold;
+            font-size: 0.95rem;
+            background: #f0f0f0;
+            padding: 4px 10px;
+            border-radius: 4px;
+            color: var(--primary-dark);
+        }
+
+        /* Favourites Grid */
+        .fav-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            padding: 5px 0;
+        }
+
+        .fav-card {
+            background: white;
+            padding: 12px 8px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            font-size: 0.82rem;
+            font-weight: bold;
+        }
+
+        .fav-card img {
+            width: 42px;
+            height: 42px;
+            object-fit: contain;
+            margin-bottom: 6px;
+        }
+
+        /* Search Input for Explore */
+        .search-box {
+            width: 100%;
+            padding: 10px 16px;
+            border: 1px solid #ccc;
+            border-radius: 20px;
+            margin-bottom: 14px;
+            outline: none;
+            font-size: 0.9rem;
+        }
+
+        /* News & Transfer Style */
+        .news-card {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .news-card img {
+            width: 100%;
+            height: 170px;
+            object-fit: cover;
+        }
+
+        .news-body {
+            padding: 12px;
+        }
+
+        .news-title {
+            font-weight: bold;
+            font-size: 0.95rem;
+            margin-bottom: 6px;
+            color: var(--primary-dark);
+        }
+
+        .news-desc {
+            font-size: 0.83rem;
+            color: var(--light-text);
+            line-height: 1.3;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header>
+        <div class="logo-area">
+            <i class="fas fa-bars" onclick="toggleDrawer()"></i>
+            <span>Koki Score</span>
+        </div>
+        <div class="header-icons">
+            <i class="fas fa-calendar-day" onclick="switchTab('matches', document.querySelectorAll('.nav-item')[0])"></i>
+            <i class="fas fa-search" onclick="switchTab('explore', document.querySelectorAll('.nav-item')[2])"></i>
+        </div>
+    </header>
+
+    <!-- Side Navigation Drawer -->
+    <div class="drawer-overlay" id="overlay" onclick="toggleDrawer()"></div>
+    <div class="side-drawer" id="drawer">
+        <div class="drawer-header">
+            <i class="fas fa-user-circle fa-2x"></i>
+            <div>
+                <div style="font-weight:bold;">Welcome to Koki Score</div>
+                <div style="font-size:0.78rem; opacity:0.8;">Login or Register</div>
+            </div>
+        </div>
+        <ul class="drawer-menu">
+            <li><a href="#" onclick="toggleDrawer(); switchTab('matches', document.querySelectorAll('.nav-item')[0]);"><i class="fas fa-futbol"></i> Matches</a></li>
+            <li><a href="#" onclick="toggleDrawer(); switchTab('favourites', document.querySelectorAll('.nav-item')[1]);"><i class="fas fa-star"></i> Favourites</a></li>
+            <li><a href="#" onclick="toggleDrawer(); switchTab('explore', document.querySelectorAll('.nav-item')[2]);"><i class="fas fa-trophy"></i> Competitions</a></li>
+            <li><a href="#" onclick="toggleDrawer(); switchTab('transfers', document.querySelectorAll('.nav-item')[3]);"><i class="fas fa-exchange-alt"></i> Transfers</a></li>
+            <li><a href="#" onclick="toggleDrawer(); switchTab('news', document.querySelectorAll('.nav-item')[4]);"><i class="fas fa-newspaper"></i> News</a></li>
+            <div class="drawer-divider"></div>
+            <li><a href="#"><i class="fas fa-cog"></i> Settings</a></li>
+            <li><a href="#"><i class="fas fa-info-circle"></i> About Koki Score</a></li>
+        </ul>
+    </div>
+
+    <!-- TAB 1: MATCHES -->
+    <div id="tab-matches" class="tab-content active">
+        <div class="date-bar">
+            <span class="date-item" onclick="filterDate('yesterday', this)">YESTERDAY</span>
+            <span class="date-item active" onclick="filterDate('today', this)">TODAY</span>
+            <span class="date-item" onclick="filterDate('live', this)">LIVE</span>
+            <span class="date-item" onclick="filterDate('tomorrow', this)">TOMORROW</span>
+        </div>
+        <div id="matches-container">
+            <!-- Matches Dynamically Loaded -->
+            <div class="league-card">
+                <div class="league-header"><i class="fas fa-globe"></i> INTERNATIONAL FRIENDLIES</div>
+                <div class="match-row">
+                    <div class="team-info">
+                        <img src="https://www.thesportsdb.com/images/media/team/badge/small/v935391583002237.png" class="team-badge" onerror="this.src='https://cdn-icons-png.flaticon.com/512/53/53283.png'">
+                        <span>Bayern München</span>
+                    </div>
+                    <span class="match-score">2 - 1</span>
+                    <div class="team-info away">
+                        <span>Aston Villa</span>
+                        <img src="https://www.thesportsdb.com/images/media/team/badge/small/3283281583002237.png" class="team-badge" onerror="this.src='https://cdn-icons-png.flaticon.com/512/53/53283.png'">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 2: FAVOURITES -->
+    <div id="tab-favourites" class="tab-content">
+        <h3 style="margin-bottom:12px; color:var(--primary-dark);">Most Wanted Teams</h3>
+        <div class="fav-grid">
+            <div class="fav-card">
+                <img src="https://www.thesportsdb.com/images/media/team/badge/small/uvxuqq1448813372.png">
+                <div>Arsenal</div>
+            </div>
+            <div class="fav-card">
+                <img src="https://www.thesportsdb.com/images/media/team/badge/small/tyytxu1448813373.png">
+                <div>Man United</div>
+            </div>
+            <div class="fav-card">
+                <img src="https://www.thesportsdb.com/images/media/team/badge/small/txtrur1448813373.png">
+                <div>Man City</div>
+            </div>
+            <div class="fav-card">
+                <img src="https://www.thesportsdb.com/images/media/team/badge/small/0002151522071853.png">
+                <div>Real Madrid</div>
+            </div>
+            <div class="fav-card">
+                <img src="https://www.thesportsdb.com/images/media/team/badge/small/1831121522071853.png">
+                <div>Barcelona</div>
+            </div>
+            <div class="fav-card">
+                <img src="https://www.thesportsdb.com/images/media/team/badge/small/1739121522071853.png">
+                <div>Liverpool</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 3: EXPLORE -->
+    <div id="tab-explore" class="tab-content">
+        <input type="text" class="search-box" placeholder="Search countries, leagues, or teams...">
+        <h4 style="margin-bottom:10px; color:var(--primary-dark);">Featured Countries</h4>
+        <ul style="list-style:none;">
+            <li style="padding:12px; background:white; margin-bottom:6px; border-radius:6px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+                <span>🇪🇹 Ethiopia (Premier League)</span>
+                <span style="color:#888; font-size:0.85rem;">3 Comps</span>
+            </li>
+            <li style="padding:12px; background:white; margin-bottom:6px; border-radius:6px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+                <span>🏴󠁧󠁢󠁥󠁮󠁧󠁿 England (Premier League)</span>
+                <span style="color:#888; font-size:0.85rem;">39 Comps</span>
+            </li>
+            <li style="padding:12px; background:white; margin-bottom:6px; border-radius:6px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+                <span>🇪🇸 Spain (La Liga)</span>
+                <span style="color:#888; font-size:0.85rem;">98 Comps</span>
+            </li>
+        </ul>
+    </div>
+
+    <!-- TAB 4: TRANSFERS -->
+    <div id="tab-transfers" class="tab-content">
+        <h3 style="margin-bottom:12px; color:var(--primary-dark);">Latest Transfers</h3>
+        <div class="news-card">
+            <div class="news-body">
+                <div class="news-title">J. Correa ➡️ Botafogo to Estudiantes</div>
+                <p class="news-desc">Official: Loan deal completed on free transfer terms.</p>
+            </div>
+        </div>
+        <div class="news-card">
+            <div class="news-body">
+                <div class="news-title">M. Kumbulla ➡️ Roma to Rayo Vallecano</div>
+                <p class="news-desc">Official: Loan agreement signed for the upcoming season.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 5: NEWS -->
+    <div id="tab-news" class="tab-content">
+        <h3 style="margin-bottom:12px; color:var(--primary-dark);">Football News</h3>
+        <div class="news-card">
+            <img src="https://www.thesportsdb.com/images/media/player/thumb/p138371583002237.jpg" alt="News Image">
+            <div class="news-body">
+                <div class="news-title">Diomande completes medical ahead of transfer</div>
+                <p class="news-desc">Ivorian winger Yan Diomande was pictured ahead of his medical checks today...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="bottom-nav">
+        <div class="nav-item active" onclick="switchTab('matches', this)">
+            <i class="fas fa-futbol"></i>
+            <span>Matches</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('favourites', this)">
+            <i class="far fa-star"></i>
+            <span>Favourites</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('explore', this)">
+            <i class="fas fa-compass"></i>
+            <span>Explore</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('transfers', this)">
+            <i class="fas fa-exchange-alt"></i>
+            <span>Transfers</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('news', this)">
+            <i class="far fa-newspaper"></i>
+            <span>News</span>
+        </div>
+    </nav>
+
     <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', function() {
-          navigator.serviceWorker.register('/sw.js').then(function(reg) {
-            console.log('ServiceWorker registered:', reg);
-          }).catch(function(err) {
-            console.log('ServiceWorker registration failed:', err);
-          });
-        });
-      }
+        function toggleDrawer() {
+            document.getElementById('drawer').classList.toggle('active');
+            document.getElementById('overlay').classList.toggle('active');
+        }
+
+        function switchTab(tabId, element) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+
+            document.getElementById('tab-' + tabId).classList.add('active');
+            if(element) element.classList.add('active');
+        }
+
+        function filterDate(type, element) {
+            document.querySelectorAll('.date-item').forEach(item => item.classList.remove('active'));
+            element.classList.add('active');
+            // Fetch filtered matches using existing Flask logic
+        }
     </script>
+</body>
+</html>
 """
-
-@app.route('/sw.js')
-def serve_sw():
-    sw_code = """
-    self.addEventListener('install', function(e) {
-      self.skipWaiting();
-    });
-    self.addEventListener('fetch', function(e) {
-      e.respondWith(fetch(e.request));
-    });
-    """
-    return sw_code, 200, {'Content-Type': 'application/javascript'}
-
-@app.route('/privacy-policy')
-def privacy_policy():
-    return "<h2>Privacy Policy</h2><p>Koki Score provides live sports updates. We do not collect or share personal information.</p>"
 
 @app.route('/')
 def home():
-    selected_date = request.args.get('date', datetime.now().strftime('%Y-%m-%d'))
-    
-    url = "https://site.api.espn.com/apis/site/v2/sports/soccer/all/scoreboard"
-    if selected_date:
-        url += f"?dates={selected_date.replace('-', '')}"
-        
-    matches = []
-    try:
-        res = requests.get(url, timeout=5)
-        if res.status_code == 200:
-            events = res.json().get('events', [])
-            for event in events:
-                comps = event.get('competitions', [{}])
-                if not comps: continue
-                comp = comps[0]
-                competitors = comp.get('competitors', [{}, {}])
-                if len(competitors) < 2: continue
-
-                home_team = competitors[0]
-                away_team = competitors[1]
-                
-                status_state = event.get('status', {}).get('type', {}).get('state', '')
-                detail = event.get('status', {}).get('type', {}).get('shortDetail', '')
-                
-                event_date = event.get('date', '')
-                start_time = format_kickoff_time(event_date)
-
-                if status_state == 'in':
-                    status = "LIVE"
-                elif status_state == 'post':
-                    status = "FINISHED"
-                else:
-                    status = "UPCOMING"
-                    if start_time:
-                        detail = f"⏰ {start_time}"
-
-                league_name = extract_league_name(event)
-
-                matches.append({
-                    "id": event.get('id'),
-                    "league": league_name,
-                    "home": home_team.get('team', {}).get('displayName', 'Home'),
-                    "home_logo": home_team.get('team', {}).get('logo', ''),
-                    "home_score": home_team.get('score', '0'),
-                    "away": away_team.get('team', {}).get('displayName', 'Away'),
-                    "away_logo": away_team.get('team', {}).get('logo', ''),
-                    "away_score": away_team.get('score', '0'),
-                    "status": status,
-                    "detail": detail,
-                    "start_time": start_time
-                })
-    except Exception as e:
-        print("Error fetching matches:", e)
-
-    return render_template_string("""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Koki Score - Live Football</title>
-        """ + PWA_HEADER + SOCIAL_BAR_CODE + INTERSTITIAL_AD_CODE + """
-        <style>
-            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f6f9; margin: 0; padding: 0; }
-            .top-bar { background: #0d47a1; color: white; padding: 14px; text-align: center; font-size: 18px; font-weight: bold; }
-            .nav-menu { display: flex; justify-content: center; background: #0a3578; padding: 8px; flex-wrap: wrap; }
-            .nav-link { color: white; text-decoration: none; font-weight: bold; margin: 4px 8px; font-size: 13px; opacity: 0.9; }
-            .nav-link.active { border-bottom: 2px solid #ffeb3b; color: #ffeb3b; }
-            .date-picker { background: white; padding: 10px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-            .date-picker input { padding: 8px 14px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; outline: none; font-weight: bold; color: #0d47a1; }
-            .container { padding: 10px; max-width: 600px; margin: auto; }
-            .match-card { background: white; border-radius: 10px; padding: 12px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.03); display: block; text-decoration: none; color: inherit; }
-            .league-title { font-size: 11px; font-weight: bold; color: #0d47a1; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f0f0f0; padding-bottom: 4px; }
-            .match-header { font-size: 11px; color: #666; text-transform: uppercase; margin-bottom: 8px; font-weight: bold; display: flex; align-items: center; justify-content: space-between; }
-            .teams { display: flex; justify-content: space-between; align-items: center; }
-            .team { display: flex; align-items: center; width: 40%; }
-            .team.away { justify-content: flex-end; }
-            .logo { width: 24px; height: 24px; margin: 0 6px; object-fit: contain; }
-            .score { font-size: 18px; font-weight: bold; background: #0d47a1; color: white; padding: 4px 10px; border-radius: 6px; }
-            .badge { font-size: 10px; padding: 3px 6px; border-radius: 4px; font-weight: bold; display: inline-block; }
-            .LIVE { background: #ffebee; color: #c62828; }
-            .FINISHED { background: #e8f5e9; color: #2e7d32; }
-            .UPCOMING { background: #e3f2fd; color: #1565c0; }
-            .time-text { font-size: 11px; font-weight: bold; color: #2e7d32; background: #e8f5e9; padding: 2px 6px; border-radius: 4px; }
-        </style>
-    </head>
-    <body>
-        <div class="top-bar">⚽ Koki Score</div>
-        <div class="nav-menu">
-            <a href="/" class="nav-link active">🏟️ Matches</a>
-            <a href="/standings" class="nav-link">📊 Standings</a>
-            <a href="/topscorers" class="nav-link">⚽ Top Scorers</a>
-        </div>
-        <div class="date-picker">
-            <form method="GET" action="/">
-                <input type="date" name="date" value="{{ selected_date }}" onchange="this.form.submit()">
-            </form>
-        </div>
-        <div class="container">
-            {% for m in matches %}
-            <a href="/match/{{ m.id }}" class="match-card">
-                <div class="league-title">
-                    <span>🏆 {{ m.league }}</span>
-                    <span style="color: #666; font-weight: normal;">{{ m.detail }}</span>
-                </div>
-                <div class="match-header">
-                    <span class="badge {{ m.status }}">{{ m.status }}</span>
-                    {% if m.start_time %}
-                        <span class="time-text">🕒 {{ m.start_time }}</span>
-                    {% endif %}
-                </div>
-                <div class="teams">
-                    <div class="team">
-                        <img class="logo" src="{{ m.home_logo }}" onerror="this.style.display='none'">
-                        <span>{{ m.home }}</span>
-                    </div>
-                    <div class="score">{{ m.home_score }} - {{ m.away_score }}</div>
-                    <div class="team away">
-                        <span>{{ m.away }}</span>
-                        <img class="logo" src="{{ m.away_logo }}" onerror="this.style.display='none'">
-                    </div>
-                </div>
-            </a>
-            {% else %}
-            <p style="text-align:center; color: #777; padding: 20px;">No matches found for the selected date.</p>
-            {% endfor %}
-            
-            """ + BANNER_AD_CODE + """
-        </div>
-        """ + PWA_SCRIPT + """
-    </body>
-    </html>
-    """, matches=matches, selected_date=selected_date)
-
-
-@app.route('/match/<match_id>')
-def match_details(match_id):
-    url = f"https://site.api.espn.com/apis/site/v2/sports/soccer/all/summary?event={match_id}"
-    match_data = {}
-    events = []
-    stats = []
-    
-    try:
-        res = requests.get(url, timeout=5)
-        if res.status_code == 200:
-            data = res.json()
-            header = data.get('header', {}).get('competitions', [{}])[0]
-            competitors = header.get('competitors', [{}, {}])
-            home_team = competitors[0] if len(competitors) > 0 else {}
-            away_team = competitors[1] if len(competitors) > 1 else {}
-            
-            league_name = data.get('header', {}).get('league', {}).get('displayName') or data.get('header', {}).get('league', {}).get('name', 'Football Match')
-
-            match_data = {
-                "league": league_name,
-                "home": home_team.get('team', {}).get('displayName', 'Home'),
-                "home_score": home_team.get('score', '0'),
-                "away": away_team.get('team', {}).get('displayName', 'Away'),
-                "away_score": away_team.get('score', '0'),
-                "status": header.get('status', {}).get('type', {}).get('shortDetail', 'FT')
-            }
-            
-            key_events = data.get('keyEvents', [])
-            for k in key_events:
-                events.append({
-                    "time": k.get('clock', {}).get('displayValue', ''),
-                    "text": k.get('text', ''),
-                    "type": k.get('type', {}).get('text', '')
-                })
-
-            boxscore = data.get('boxscore', {}).get('teams', [])
-            if len(boxscore) == 2:
-                home_stats = {s['name']: s['displayValue'] for s in boxscore[0].get('statistics', []) if 'name' in s}
-                away_stats = {s['name']: s['displayValue'] for s in boxscore[1].get('statistics', []) if 'name' in s}
-                
-                all_keys = set(home_stats.keys()).union(set(away_stats.keys()))
-                for k in sorted(all_keys):
-                    stats.append({
-                        "name": k.replace('label', '').replace('%', ' %').upper(),
-                        "home": home_stats.get(k, '-'),
-                        "away": away_stats.get(k, '-')
-                    })
-    except Exception as e:
-        print("Match detail error:", e)
-
-    return render_template_string("""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>{{ match.home }} vs {{ match.away }} - Koki Score</title>
-        """ + PWA_HEADER + SOCIAL_BAR_CODE + INTERSTITIAL_AD_CODE + """
-        <style>
-            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f6f9; margin: 0; padding: 0; }
-            .top-bar { background: #0d47a1; color: white; padding: 14px; text-align: center; font-size: 18px; font-weight: bold; }
-            .container { padding: 12px; max-width: 600px; margin: auto; }
-            .back-btn { display: inline-block; margin-bottom: 12px; color: #0d47a1; text-decoration: none; font-weight: bold; font-size: 14px; }
-            .card { background: white; border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.03); }
-            .header-league { text-align: center; font-size: 11px; background: #e3f2fd; color: #0d47a1; font-weight: bold; padding: 4px 10px; border-radius: 12px; display: inline-block; margin: auto; }
-            .score-box { display: flex; justify-content: space-around; align-items: center; margin-top: 15px; text-align: center; }
-            .team-name { font-size: 16px; font-weight: bold; width: 35%; }
-            .score-num { font-size: 24px; font-weight: bold; background: #0d47a1; color: white; padding: 6px 16px; border-radius: 8px; }
-            .status-text { text-align: center; color: #c62828; font-size: 11px; font-weight: bold; margin-top: 8px; }
-            .section-title { font-size: 13px; font-weight: bold; color: #0d47a1; margin-bottom: 10px; border-bottom: 2px solid #e3f2fd; padding-bottom: 4px; }
-            .stat-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #f0f0f0; font-size: 12px; }
-            .stat-name { color: #555; font-weight: 500; }
-        </style>
-    </head>
-    <body>
-        <div class="top-bar">⚽ Koki Score Hub</div>
-        <div class="container">
-            <a href="/" class="back-btn">← Back to Matches</a>
-            
-            <div class="card" style="text-align: center;">
-                <div class="header-league">🏆 {{ match.league }}</div>
-                <div class="score-box">
-                    <div class="team-name">{{ match.home }}</div>
-                    <div class="score-num">{{ match.home_score }} - {{ match.away_score }}</div>
-                    <div class="team-name">{{ match.away }}</div>
-                </div>
-                <div class="status-text">STATUS: {{ match.status }}</div>
-            </div>
-
-            """ + BANNER_AD_CODE + """
-
-            <div class="card">
-                <div class="section-title">⚽ GOAL EVENTS & TIMELINE</div>
-                {% if events %}
-                    {% for ev in events %}
-                        <div style="font-size: 12px; padding: 4px 0;"><b>{{ ev.time }}</b> - {{ ev.text }}</div>
-                    {% endfor %}
-                {% else %}
-                    <p style="font-size:12px; color: #777; text-align:center;">No match events or goals recorded for this game.</p>
-                {% endif %}
-            </div>
-
-            <div class="card">
-                <div class="section-title">📊 MATCH STATISTICS</div>
-                {% if stats %}
-                    {% for st in stats %}
-                        <div class="stat-row">
-                            <b>{{ st.home }}</b>
-                            <span class="stat-name">{{ st.name }}</span>
-                            <b>{{ st.away }}</b>
-                        </div>
-                    {% endfor %}
-                {% else %}
-                    <p style="font-size:12px; color: #777; text-align:center;">No detailed statistics available for this match.</p>
-                {% endif %}
-            </div>
-        </div>
-        """ + PWA_SCRIPT + """
-    </body>
-    </html>
-    """, match=match_data, events=events, stats=stats)
-
-
-@app.route('/standings')
-def standings():
-    league_code = request.args.get('league', 'eng.1')
-    standings_data = []
-    
-    url = f"https://site.api.espn.com/apis/v2/sports/soccer/{league_code}/standings"
-    try:
-        res = requests.get(url, timeout=5)
-        if res.status_code == 200:
-            data = res.json()
-            entries = []
-            
-            if 'children' in data and len(data['children']) > 0:
-                for child in data['children']:
-                    if 'standings' in child and 'entries' in child['standings']:
-                        entries.extend(child['standings']['entries'])
-            elif 'standings' in data and 'entries' in data['standings']:
-                entries = data['standings']['entries']
-            
-            for idx, item in enumerate(entries, start=1):
-                team = item.get('team', {})
-                stats_list = item.get('stats', [])
-                stats = {s.get('name'): s.get('value') for s in stats_list if 'name' in s}
-                
-                rank_val = stats.get('rank', idx)
-                if not rank_val:
-                    rank_val = idx
-
-                standings_data.append({
-                    "rank": int(rank_val),
-                    "team": team.get('displayName', 'Team'),
-                    "logo": team.get('logos', [{}])[0].get('href', '') if team.get('logos') else '',
-                    "played": int(stats.get('gamesPlayed', 0)),
-                    "wins": int(stats.get('wins', 0)),
-                    "draws": int(stats.get('ties', 0)),
-                    "losses": int(stats.get('losses', 0)),
-                    "gf": int(stats.get('pointsFor', 0)),
-                    "ga": int(stats.get('pointsAgainst', 0)),
-                    "gd": int(stats.get('pointDifferential', 0)),
-                    "pts": int(stats.get('points', 0))
-                })
-                
-            standings_data = sorted(standings_data, key=lambda x: x['rank'])
-            
-    except Exception as e:
-        print("Standings Error:", e)
-
-    return render_template_string("""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>League Standings - Koki Score</title>
-        """ + PWA_HEADER + SOCIAL_BAR_CODE + INTERSTITIAL_AD_CODE + """
-        <style>
-            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f6f9; margin: 0; padding: 0; }
-            .top-bar { background: #0d47a1; color: white; padding: 14px; text-align: center; font-size: 18px; font-weight: bold; }
-            .nav-menu { display: flex; justify-content: center; background: #0a3578; padding: 8px; flex-wrap: wrap; }
-            .nav-link { color: white; text-decoration: none; font-weight: bold; margin: 4px 8px; font-size: 13px; opacity: 0.9; }
-            .nav-link.active { border-bottom: 2px solid #ffeb3b; color: #ffeb3b; }
-            .league-selector { display: flex; overflow-x: auto; background: #1565c0; padding: 8px; scrollbar-width: none; }
-            .league-btn { color: #bbdefb; text-decoration: none; padding: 6px 12px; font-size: 12px; font-weight: bold; border-radius: 15px; white-space: nowrap; margin-right: 5px; }
-            .league-btn.active { background: #ffeb3b; color: #0d47a1; }
-            .container { padding: 10px; max-width: 600px; margin: auto; }
-            table { width: 100%; background: white; border-collapse: collapse; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.03); font-size: 12px; }
-            th { background: #f0f4f8; color: #333; padding: 8px 4px; text-align: center; font-weight: bold; }
-            td { padding: 8px 4px; text-align: center; border-bottom: 1px solid #eee; }
-            .team-cell { display: flex; align-items: center; text-align: left; font-weight: bold; color: #111; }
-            .team-logo { width: 18px; height: 18px; margin-right: 6px; object-fit: contain; }
-            .pts-col { background: #e3f2fd; font-weight: bold; color: #0d47a1; }
-        </style>
-    </head>
-    <body>
-        <div class="top-bar">⚽ League Standings</div>
-        <div class="nav-menu">
-            <a href="/" class="nav-link">🏟️ Matches</a>
-            <a href="/standings" class="nav-link active">📊 Standings</a>
-            <a href="/topscorers" class="nav-link">⚽ Top Scorers</a>
-        </div>
-        <div class="league-selector">
-            {% for code, name in leagues.items() %}
-                <a href="/standings?league={{ code }}" class="league-btn {% if code == selected_league %}active{% endif %}">{{ name }}</a>
-            {% endfor %}
-        </div>
-        <div class="container">
-            <table>
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th style="text-align:left;">TEAM</th>
-                        <th>P</th>
-                        <th>W</th>
-                        <th>D</th>
-                        <th>L</th>
-                        <th>F</th>
-                        <th>A</th>
-                        <th>GD</th>
-                        <th class="pts-col">PTS</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for row in standings %}
-                    <tr>
-                        <td style="color:#0d47a1; font-weight:bold;">{{ row.rank }}</td>
-                        <td class="team-cell">
-                            {% if row.logo %}<img src="{{ row.logo }}" class="team-logo">{% endif %}
-                            <span>{{ row.team }}</span>
-                        </td>
-                        <td>{{ row.played }}</td>
-                        <td>{{ row.wins }}</td>
-                        <td>{{ row.draws }}</td>
-                        <td>{{ row.losses }}</td>
-                        <td>{{ row.gf }}</td>
-                        <td>{{ row.ga }}</td>
-                        <td>{{ row.gd }}</td>
-                        <td class="pts-col">{{ row.pts }}</td>
-                    </tr>
-                    {% else %}
-                    <tr><td colspan="10">No standings data available currently.</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-
-            """ + BANNER_AD_CODE + """
-        </div>
-        """ + PWA_SCRIPT + """
-    </body>
-    </html>
-    """, standings=standings_data, leagues=LEAGUES_MAP, selected_league=league_code)
-
-
-@app.route('/topscorers')
-def topscorers():
-    league_code = request.args.get('league', 'eng.1')
-    scorers_data = []
-    
-    try:
-        url = f"https://site.api.espn.com/apis/v2/sports/soccer/{league_code}/leaders"
-        res = requests.get(url, timeout=5)
-        
-        if res.status_code == 200:
-            data = res.json()
-            categories = data.get('leaders', [])
-            
-            goals_category = next((c for c in categories if c.get('name') in ['goals', 'scoring'] or 'goal' in c.get('displayName', '').lower()), None)
-            if not goals_category and len(categories) > 0:
-                goals_category = categories[0]
-                
-            if goals_category:
-                leaders = goals_category.get('leaders', [])
-                for idx, leader in enumerate(leaders[:20], start=1):
-                    athlete = leader.get('athlete', {})
-                    name = athlete.get('displayName', athlete.get('fullName', 'Player'))
-                    headshot = athlete.get('headshot', {}).get('href', '') if isinstance(athlete.get('headshot'), dict) else athlete.get('headshot', '')
-                    team = athlete.get('team', {}).get('displayName', '')
-                    goals = leader.get('value', 0)
-                    
-                    scorers_data.append({
-                        "rank": idx,
-                        "name": name,
-                        "team": team,
-                        "headshot": headshot,
-                        "goals": int(goals)
-                    })
-    except Exception as e:
-        print("Top Scorers Error:", e)
-
-    return render_template_string("""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Top Scorers - Koki Score</title>
-        """ + PWA_HEADER + SOCIAL_BAR_CODE + INTERSTITIAL_AD_CODE + """
-        <style>
-            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f6f9; margin: 0; padding: 0; }
-            .top-bar { background: #0d47a1; color: white; padding: 14px; text-align: center; font-size: 18px; font-weight: bold; }
-            .nav-menu { display: flex; justify-content: center; background: #0a3578; padding: 8px; flex-wrap: wrap; }
-            .nav-link { color: white; text-decoration: none; font-weight: bold; margin: 4px 8px; font-size: 13px; opacity: 0.9; }
-            .nav-link.active { border-bottom: 2px solid #ffeb3b; color: #ffeb3b; }
-            .league-selector { display: flex; overflow-x: auto; background: #1565c0; padding: 8px; scrollbar-width: none; }
-            .league-btn { color: #bbdefb; text-decoration: none; padding: 6px 12px; font-size: 12px; font-weight: bold; border-radius: 15px; white-space: nowrap; margin-right: 5px; }
-            .league-btn.active { background: #ffeb3b; color: #0d47a1; }
-            .container { padding: 10px; max-width: 600px; margin: auto; }
-            .scorer-card { background: white; border-radius: 10px; padding: 10px 14px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 5px rgba(0,0,0,0.03); }
-            .rank { font-size: 16px; font-weight: bold; color: #0d47a1; width: 25px; }
-            .player-info { display: flex; align-items: center; flex-grow: 1; margin-left: 5px; }
-            .player-img { width: 38px; height: 38px; border-radius: 50%; background: #eee; margin-right: 10px; object-fit: cover; }
-            .player-name { font-size: 13px; font-weight: bold; color: #222; }
-            .player-team { font-size: 11px; color: #666; }
-            .goals-badge { background: #e3f2fd; color: #0d47a1; font-weight: bold; padding: 6px 12px; border-radius: 20px; font-size: 13px; }
-        </style>
-    </head>
-    <body>
-        <div class="top-bar">⚽ Top Scorers</div>
-        <div class="nav-menu">
-            <a href="/" class="nav-link">🏟️ Matches</a>
-            <a href="/standings" class="nav-link">📊 Standings</a>
-            <a href="/topscorers" class="nav-link active">⚽ Top Scorers</a>
-        </div>
-        <div class="league-selector">
-            {% for code, name in leagues.items() %}
-                <a href="/topscorers?league={{ code }}" class="league-btn {% if code == selected_league %}active{% endif %}">{{ name }}</a>
-            {% endfor %}
-        </div>
-        <div class="container">
-            {% if scorers %}
-                {% for player in scorers %}
-                <div class="scorer-card">
-                    <div class="rank">#{{ player.rank }}</div>
-                    <div class="player-info">
-                        {% if player.headshot %}
-                            <img src="{{ player.headshot }}" class="player-img" alt="">
-                        {% else %}
-                            <div class="player-img" style="display:flex;align-items:center;justify-content:center;font-size:18px;">👤</div>
-                        {% endif %}
-                        <div>
-                            <div class="player-name">{{ player.name }}</div>
-                            <div class="player-team">{{ player.team }}</div>
-                        </div>
-                    </div>
-                    <div class="goals-badge">⚽ {{ player.goals }} Goals</div>
-                </div>
-                {% endfor %}
-            {% else %}
-                <div style="text-align:center; padding: 30px; color: #777; background: white; border-radius: 10px;">
-                    No top scorers data currently available for this league.
-                </div>
-            {% endif %}
-
-            """ + BANNER_AD_CODE + """
-        </div>
-        """ + PWA_SCRIPT + """
-    </body>
-    </html>
-    """, scorers=scorers_data, leagues=LEAGUES_MAP, selected_league=league_code)
-
+    return render_template_string(HTML_TEMPLATE)
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+    app.run(debug=True)
