@@ -18,10 +18,14 @@ LEAGUES_MAP = {
 }
 
 # ---------------------------------------------------------
-# AD CODES SECTION (Clean & User-friendly)
+# ADSTERRA AD CODES SECTION
 # ---------------------------------------------------------
 SOCIAL_BAR_CODE = """
 <script type="text/javascript" src="https://pl30518340.effectivecpmnetwork.com/8c/d4/6b/8cd46b5b8dc5c8760a2063e5f3663df5.js"></script>
+"""
+
+INTERSTITIAL_AD_CODE = """
+<!-- Interstitial Ad Code -->
 """
 
 BANNER_AD_CODE = """
@@ -53,16 +57,15 @@ def extract_league_name(event):
     return "Football Match"
 
 def format_kickoff_time(date_str):
+    if not date_str:
+        return ""
     try:
-        dt = datetime.strptime(date_str, "%Y-%m-%dT%HZ")
-    except ValueError:
-        try:
-            dt = datetime.strptime(date_str, "%Y-%m-%dT%H:%MZ")
-        except ValueError:
-            return ""
-    
-    eat_time = dt + timedelta(hours=3)
-    return eat_time.strftime("%I:%M %p")
+        clean_date = date_str.replace("Z", "+00:00")
+        dt = datetime.fromisoformat(clean_date)
+        eat_time = dt + timedelta(hours=3)
+        return eat_time.strftime("%I:%M %p")
+    except Exception:
+        return ""
 
 @app.route('/manifest.json')
 def serve_manifest():
@@ -104,6 +107,10 @@ def serve_sw():
     """
     return sw_code, 200, {'Content-Type': 'application/javascript'}
 
+@app.route('/privacy-policy')
+def privacy_policy():
+    return "<h2>Privacy Policy</h2><p>Koki Score provides live sports updates. We do not collect or share personal information.</p>"
+
 @app.route('/')
 def home():
     selected_date = request.args.get('date', datetime.now().strftime('%Y-%m-%d'))
@@ -118,15 +125,20 @@ def home():
         if res.status_code == 200:
             events = res.json().get('events', [])
             for event in events:
-                comp = event['competitions'][0]
-                home_team = comp['competitors'][0]
-                away_team = comp['competitors'][1]
+                comps = event.get('competitions', [{}])
+                if not comps: continue
+                comp = comps[0]
+                competitors = comp.get('competitors', [{}, {}])
+                if len(competitors) < 2: continue
+
+                home_team = competitors[0]
+                away_team = competitors[1]
                 
-                status_state = event['status']['type']['state']
-                detail = event['status']['type']['shortDetail']
+                status_state = event.get('status', {}).get('type', {}).get('state', '')
+                detail = event.get('status', {}).get('type', {}).get('shortDetail', '')
                 
                 event_date = event.get('date', '')
-                start_time = format_kickoff_time(event_date) if event_date else ""
+                start_time = format_kickoff_time(event_date)
 
                 if status_state == 'in':
                     status = "LIVE"
@@ -142,11 +154,11 @@ def home():
                 matches.append({
                     "id": event.get('id'),
                     "league": league_name,
-                    "home": home_team['team']['displayName'],
-                    "home_logo": home_team['team'].get('logo', ''),
+                    "home": home_team.get('team', {}).get('displayName', 'Home'),
+                    "home_logo": home_team.get('team', {}).get('logo', ''),
                     "home_score": home_team.get('score', '0'),
-                    "away": away_team['team']['displayName'],
-                    "away_logo": away_team['team'].get('logo', ''),
+                    "away": away_team.get('team', {}).get('displayName', 'Away'),
+                    "away_logo": away_team.get('team', {}).get('logo', ''),
                     "away_score": away_team.get('score', '0'),
                     "status": status,
                     "detail": detail,
@@ -161,7 +173,7 @@ def home():
     <head>
         <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Koki Score - Live Football</title>
-        """ + PWA_HEADER + SOCIAL_BAR_CODE + """
+        """ + PWA_HEADER + SOCIAL_BAR_CODE + INTERSTITIAL_AD_CODE + """
         <style>
             body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f6f9; margin: 0; padding: 0; }
             .top-bar { background: #0d47a1; color: white; padding: 14px; text-align: center; font-size: 18px; font-weight: bold; }
@@ -247,8 +259,9 @@ def match_details(match_id):
         if res.status_code == 200:
             data = res.json()
             header = data.get('header', {}).get('competitions', [{}])[0]
-            home_team = header.get('competitors', [{}])[0]
-            away_team = header.get('competitors', [{}])[1]
+            competitors = header.get('competitors', [{}, {}])
+            home_team = competitors[0] if len(competitors) > 0 else {}
+            away_team = competitors[1] if len(competitors) > 1 else {}
             
             league_name = data.get('header', {}).get('league', {}).get('displayName') or data.get('header', {}).get('league', {}).get('name', 'Football Match')
 
@@ -271,8 +284,8 @@ def match_details(match_id):
 
             boxscore = data.get('boxscore', {}).get('teams', [])
             if len(boxscore) == 2:
-                home_stats = {s['name']: s['displayValue'] for s in boxscore[0].get('statistics', [])}
-                away_stats = {s['name']: s['displayValue'] for s in boxscore[1].get('statistics', [])}
+                home_stats = {s['name']: s['displayValue'] for s in boxscore[0].get('statistics', []) if 'name' in s}
+                away_stats = {s['name']: s['displayValue'] for s in boxscore[1].get('statistics', []) if 'name' in s}
                 
                 all_keys = set(home_stats.keys()).union(set(away_stats.keys()))
                 for k in sorted(all_keys):
@@ -290,7 +303,7 @@ def match_details(match_id):
     <head>
         <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>{{ match.home }} vs {{ match.away }} - Koki Score</title>
-        """ + PWA_HEADER + SOCIAL_BAR_CODE + """
+        """ + PWA_HEADER + SOCIAL_BAR_CODE + INTERSTITIAL_AD_CODE + """
         <style>
             body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f6f9; margin: 0; padding: 0; }
             .top-bar { background: #0d47a1; color: white; padding: 14px; text-align: center; font-size: 18px; font-weight: bold; }
@@ -409,7 +422,7 @@ def standings():
     <head>
         <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>League Standings - Koki Score</title>
-        """ + PWA_HEADER + SOCIAL_BAR_CODE + """
+        """ + PWA_HEADER + SOCIAL_BAR_CODE + INTERSTITIAL_AD_CODE + """
         <style>
             body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f6f9; margin: 0; padding: 0; }
             .top-bar { background: #0d47a1; color: white; padding: 14px; text-align: center; font-size: 18px; font-weight: bold; }
@@ -529,7 +542,7 @@ def topscorers():
     <head>
         <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Top Scorers - Koki Score</title>
-        """ + PWA_HEADER + SOCIAL_BAR_CODE + """
+        """ + PWA_HEADER + SOCIAL_BAR_CODE + INTERSTITIAL_AD_CODE + """
         <style>
             body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f6f9; margin: 0; padding: 0; }
             .top-bar { background: #0d47a1; color: white; padding: 14px; text-align: center; font-size: 18px; font-weight: bold; }
