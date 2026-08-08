@@ -71,8 +71,15 @@ def format_kickoff_time(date_str):
 def serve_manifest():
     return send_from_directory('static', 'manifest.json')
 
+# Route for Service Worker from root to grant full PWA scope
+@app.route('/sw.js')
+def serve_sw():
+    response = send_from_directory('static', 'sw.js')
+    response.headers['Service-Worker-Allowed'] = '/'
+    return response
+
 PWA_HEADER = """
-        <link rel="manifest" href="/static/manifest.json">
+        <link rel="manifest" href="/manifest.json">
         <meta name="theme-color" content="#0d47a1">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
         <meta name="mobile-web-app-capable" content="yes">
@@ -87,7 +94,7 @@ PWA_SCRIPT = """
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {
-          navigator.serviceWorker.register('/static/sw.js').then(function(reg) {
+          navigator.serviceWorker.register('/sw.js', {scope: '/'}).then(function(reg) {
             console.log('ServiceWorker registered:', reg);
           }).catch(function(err) {
             console.log('ServiceWorker registration failed:', err);
@@ -104,6 +111,12 @@ PWA_SCRIPT = """
             menu.style.left = '0px';
             overlay.style.display = 'block';
         }
+      }
+      // Auto-refresh match data every 60 seconds
+      if (window.location.pathname === '/' || window.location.pathname.startsWith('/match/')) {
+          setInterval(function() {
+              window.location.reload();
+          }, 60000);
       }
     </script>
 """
@@ -178,18 +191,6 @@ BOTTOM_NAV_HTML = """
     </a>
 </div>
 """
-
-@app.route('/sw.js')
-def serve_sw():
-    sw_code = """
-    self.addEventListener('install', function(e) {
-      self.skipWaiting();
-    });
-    self.addEventListener('fetch', function(e) {
-      e.respondWith(fetch(e.request));
-    });
-    """
-    return sw_code, 200, {'Content-Type': 'application/javascript'}
 
 @app.route('/privacy-policy')
 def privacy_policy():
@@ -307,13 +308,13 @@ def home():
                 </div>
                 <div class="teams">
                     <div class="team">
-                        <img class="logo" src="{{ m.home_logo }}" onerror="this.style.display='none'">
+                        <img class="logo" src="{{ m.home_logo }}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/5328/5328320.png'">
                         <span>{{ m.home }}</span>
                     </div>
                     <div class="score">{{ m.home_score }} - {{ m.away_score }}</div>
                     <div class="team away">
                         <span>{{ m.away }}</span>
-                        <img class="logo" src="{{ m.away_logo }}" onerror="this.style.display='none'">
+                        <img class="logo" src="{{ m.away_logo }}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/5328/5328320.png'">
                     </div>
                 </div>
             </a>
@@ -369,7 +370,7 @@ def favourites():
                 {% for team in teams %}
                 <div class="team-card">
                     <i class="far fa-star fav-star"></i>
-                    <img src="{{ team.logo }}">
+                    <img src="{{ team.logo }}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/5328/5328320.png'">
                     <div>{{ team.name }}</div>
                 </div>
                 {% endfor %}
@@ -533,7 +534,7 @@ def news():
         <div class="container">
             {% for item in news_items %}
             <div class="news-card">
-                <img src="{{ item.img }}" class="news-img">
+                <img src="{{ item.img }}" class="news-img" onerror="this.src='https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=500'">
                 <div class="news-body">
                     <div class="news-title">{{ item.title }}</div>
                     <div class="news-desc">{{ item.desc }}</div>
@@ -763,7 +764,7 @@ def standings():
                     <tr>
                         <td style="color:#0d47a1; font-weight:bold;">{{ row.rank }}</td>
                         <td class="team-cell">
-                            {% if row.logo %}<img src="{{ row.logo }}" class="team-logo">{% endif %}
+                            {% if row.logo %}<img src="{{ row.logo }}" class="team-logo" onerror="this.style.display='none'">{% endif %}
                             <span>{{ row.team }}</span>
                         </td>
                         <td>{{ row.played }}</td>
@@ -858,7 +859,7 @@ def topscorers():
                     <div class="rank">#{{ player.rank }}</div>
                     <div class="player-info">
                         {% if player.headshot %}
-                            <img src="{{ player.headshot }}" class="player-img">
+                            <img src="{{ player.headshot }}" class="player-img" onerror="this.style.display='none'">
                         {% else %}
                             <div class="player-img" style="display:flex;align-items:center;justify-content:center;font-size:18px;">👤</div>
                         {% endif %}
