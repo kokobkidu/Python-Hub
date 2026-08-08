@@ -72,13 +72,14 @@ def serve_manifest():
     return send_from_directory('static', 'manifest.json')
 
 PWA_HEADER = """
-        <link rel="manifest" href="/manifest.json">
+        <link rel="manifest" href="/static/manifest.json">
         <meta name="theme-color" content="#0d47a1">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
         <meta name="mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
         <meta name="apple-mobile-web-app-title" content="Koki Score">
-        <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/53/53283.png">
+        <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/5328/5328320.png">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 """
 
@@ -86,7 +87,7 @@ PWA_SCRIPT = """
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {
-          navigator.serviceWorker.register('/sw.js').then(function(reg) {
+          navigator.serviceWorker.register('/static/sw.js').then(function(reg) {
             console.log('ServiceWorker registered:', reg);
           }).catch(function(err) {
             console.log('ServiceWorker registration failed:', err);
