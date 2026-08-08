@@ -1,21 +1,24 @@
 {
   "short_name": "Koki Score",
   "name": "Koki Score - Live Football",
-  "icons": [
-    {
-      "src": "https://cdn-icons-png.flaticon.com/512/53/53283.png",
-      "type": "image/png",
-      "sizes": "192x192"
-    },
-    {
-      "src": "https://cdn-icons-png.flaticon.com/512/53/53283.png",
-      "type": "image/png",
-      "sizes": "512x512"
-    }
-  ],
+  "id": "/",
   "start_url": "/",
   "background_color": "#0d47a1",
   "theme_color": "#0d47a1",
   "display": "standalone",
-  "orientation": "portrait"
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/5328/5328320.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/5328/5328320.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ]
 }
