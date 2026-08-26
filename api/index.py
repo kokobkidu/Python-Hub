@@ -18,21 +18,11 @@ LEAGUES_MAP = {
 }
 
 # ---------------------------------------------------------
-# ADSTERRA AD CODES SECTION
+# ADVERTISEMENTS REMOVED FOR HUAWEI COMPLIANCE
 # ---------------------------------------------------------
-SOCIAL_BAR_CODE = """
-<script type="text/javascript" src="https://pl30518340.effectivecpmnetwork.com/8c/d4/6b/8cd46b5b8dc5c8760a2063e5f3663df5.js"></script>
-"""
-
-INTERSTITIAL_AD_CODE = """
-<!-- Interstitial Ad Code -->
-"""
-
-BANNER_AD_CODE = """
-<div style="text-align: center; margin: 15px 0; min-height: 50px;">
-    <!-- Banner Ad Code Space -->
-</div>
-"""
+SOCIAL_BAR_CODE = ""
+INTERSTITIAL_AD_CODE = ""
+BANNER_AD_CODE = ""
 # ---------------------------------------------------------
 
 def extract_league_name(event):
@@ -112,7 +102,6 @@ PWA_SCRIPT = """
         }
       }
       
-      // Toast notification for upcoming/disabled features (Fixes Amazon button issue)
       function showToast(message) {
         var toast = document.getElementById("toastNotification");
         if(!toast) {
@@ -148,7 +137,6 @@ COMMON_STYLE = """
     .nav-link.active { border-bottom: 2px solid #ffeb3b; color: #ffeb3b; }
     .container { padding: 10px; max-width: 600px; margin: auto; }
     
-    /* Side Menu */
     .side-menu { position: fixed; top: 0; left: -280px; width: 260px; height: 100%; background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.2); z-index: 1000; transition: left 0.3s ease; overflow-y: auto; }
     .menu-header { background: #0d47a1; color: white; padding: 20px 15px; display: flex; align-items: center; gap: 12px; cursor: pointer; }
     .menu-header i { font-size: 32px; }
@@ -157,7 +145,6 @@ COMMON_STYLE = """
     .menu-divider { padding: 10px 20px 4px 20px; font-size: 11px; font-weight: bold; color: #888; text-transform: uppercase; background: #f8f9fa; }
     .menu-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; display: none; }
 
-    /* Bottom Navigation Bar */
     .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid #ddd; display: flex; justify-content: space-around; padding: 6px 0; z-index: 100; box-shadow: 0 -2px 5px rgba(0,0,0,0.05); }
     .nav-item { text-align: center; color: #777; text-decoration: none; font-size: 10px; font-weight: bold; flex: 1; display: flex; flex-direction: column; align-items: center; }
     .nav-item i { font-size: 18px; margin-bottom: 2px; }
@@ -183,7 +170,6 @@ SIDE_MENU_HTML = """
     <a href="/" class="menu-item"><i class="fas fa-search"></i> Find Match</a>
     
     <div class="menu-divider">More Options</div>
-    <div onclick="showToast('Ad-free subscription coming soon!')" class="menu-item"><i class="fas fa-ad"></i> Remove Ads</div>
     <div onclick="showToast('Settings option coming soon!')" class="menu-item"><i class="fas fa-cog"></i> Settings</div>
     <a href="/privacy-policy" class="menu-item"><i class="fas fa-info-circle"></i> About Us</a>
     <div onclick="showToast('Report feature coming soon!')" class="menu-item"><i class="fas fa-bug"></i> Report Incidence</div>
@@ -891,7 +877,7 @@ def topscorers():
                             <img src="{{ player.headshot }}" class="player-img" onerror="this.style.display='none'">
                         {% else %}
                             <div class="player-img" style="display:flex;align-items:center;justify-content:center;font-size:18px;">👤</div>
-                        {% endif %}
+                        {% icon_img_placeholder %}
                         <div>
                             <div class="player-name">{{ player.name }}</div>
                             <div class="player-team">{{ player.team }}</div>
