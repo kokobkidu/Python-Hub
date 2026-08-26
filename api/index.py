@@ -71,7 +71,6 @@ def format_kickoff_time(date_str):
 def serve_manifest():
     return send_from_directory('static', 'manifest.json')
 
-# Route for Service Worker from root to grant full PWA scope
 @app.route('/sw.js')
 def serve_sw():
     response = send_from_directory('static', 'sw.js')
@@ -112,7 +111,25 @@ PWA_SCRIPT = """
             overlay.style.display = 'block';
         }
       }
-      // Auto-refresh match data every 60 seconds
+      
+      // Toast notification for upcoming/disabled features (Fixes Amazon button issue)
+      function showToast(message) {
+        var toast = document.getElementById("toastNotification");
+        if(!toast) {
+            toast = document.createElement("div");
+            toast.id = "toastNotification";
+            toast.style.cssText = "position:fixed; bottom:70px; left:50%; transform:translateX(-50%); background:#323232; color:#fff; padding:10px 20px; border-radius:20px; font-size:12px; z-index:9999; box-shadow:0 2px 5px rgba(0,0,0,0.3); transition: opacity 0.3s ease;";
+            document.body.appendChild(toast);
+        }
+        toast.innerText = message || "Feature coming soon!";
+        toast.style.opacity = "1";
+        toast.style.display = "block";
+        setTimeout(function(){ 
+            toast.style.opacity = "0";
+            setTimeout(function(){ toast.style.display = "none"; }, 300);
+        }, 2500);
+      }
+
       if (window.location.pathname === '/' || window.location.pathname.startsWith('/match/')) {
           setInterval(function() {
               window.location.reload();
@@ -133,9 +150,9 @@ COMMON_STYLE = """
     
     /* Side Menu */
     .side-menu { position: fixed; top: 0; left: -280px; width: 260px; height: 100%; background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.2); z-index: 1000; transition: left 0.3s ease; overflow-y: auto; }
-    .menu-header { background: #0d47a1; color: white; padding: 20px 15px; display: flex; align-items: center; gap: 12px; }
+    .menu-header { background: #0d47a1; color: white; padding: 20px 15px; display: flex; align-items: center; gap: 12px; cursor: pointer; }
     .menu-header i { font-size: 32px; }
-    .menu-item { display: flex; align-items: center; gap: 15px; padding: 14px 20px; color: #333; text-decoration: none; font-size: 14px; border-bottom: 1px solid #f0f0f0; }
+    .menu-item { display: flex; align-items: center; gap: 15px; padding: 14px 20px; color: #333; text-decoration: none; font-size: 14px; border-bottom: 1px solid #f0f0f0; cursor: pointer; }
     .menu-item i { color: #0d47a1; width: 20px; text-align: center; }
     .menu-divider { padding: 10px 20px 4px 20px; font-size: 11px; font-weight: bold; color: #888; text-transform: uppercase; background: #f8f9fa; }
     .menu-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; display: none; }
@@ -145,13 +162,14 @@ COMMON_STYLE = """
     .nav-item { text-align: center; color: #777; text-decoration: none; font-size: 10px; font-weight: bold; flex: 1; display: flex; flex-direction: column; align-items: center; }
     .nav-item i { font-size: 18px; margin-bottom: 2px; }
     .nav-item.active { color: #0d47a1; }
+    .retry-btn { background: #0d47a1; color: white; border: none; padding: 8px 16px; border-radius: 5px; font-weight: bold; cursor: pointer; margin-top: 10px; }
 </style>
 """
 
 SIDE_MENU_HTML = """
 <div class="menu-overlay" id="menuOverlay" onclick="toggleMenu()"></div>
 <div class="side-menu" id="sideMenu">
-    <div class="menu-header">
+    <div class="menu-header" onclick="showToast('Login & Registration feature coming soon!')">
         <i class="fas fa-user-circle"></i>
         <div>
             <div style="font-weight: bold; font-size: 15px;">Login or Register</div>
@@ -165,10 +183,10 @@ SIDE_MENU_HTML = """
     <a href="/" class="menu-item"><i class="fas fa-search"></i> Find Match</a>
     
     <div class="menu-divider">More Options</div>
-    <a href="#" class="menu-item"><i class="fas fa-ad"></i> Remove Ads</a>
-    <a href="#" class="menu-item"><i class="fas fa-cog"></i> Settings</a>
+    <div onclick="showToast('Ad-free subscription coming soon!')" class="menu-item"><i class="fas fa-ad"></i> Remove Ads</div>
+    <div onclick="showToast('Settings option coming soon!')" class="menu-item"><i class="fas fa-cog"></i> Settings</div>
     <a href="/privacy-policy" class="menu-item"><i class="fas fa-info-circle"></i> About Us</a>
-    <a href="#" class="menu-item"><i class="fas fa-bug"></i> Report Incidence</a>
+    <div onclick="showToast('Report feature coming soon!')" class="menu-item"><i class="fas fa-bug"></i> Report Incidence</div>
 </div>
 """
 
@@ -205,8 +223,9 @@ def home():
         url += f"?dates={selected_date.replace('-', '')}"
         
     matches = []
+    error_msg = None
     try:
-        res = requests.get(url, timeout=5)
+        res = requests.get(url, timeout=7)
         if res.status_code == 200:
             events = res.json().get('events', [])
             for event in events:
@@ -248,8 +267,11 @@ def home():
                     "detail": detail,
                     "start_time": start_time
                 })
+        else:
+            error_msg = "Unable to fetch match scores. Please try again."
     except Exception as e:
         print("Error fetching matches:", e)
+        error_msg = "Network timeout or connection error. Please refresh."
 
     return render_template_string("""
     <!DOCTYPE html>
@@ -281,7 +303,7 @@ def home():
         <div class="top-bar">
             <button class="icon-btn" onclick="toggleMenu()"><i class="fas fa-bars"></i></button>
             <span>⚽ Koki Score</span>
-            <i class="fas fa-search icon-btn"></i>
+            <i class="fas fa-search icon-btn" onclick="showToast('Search functionality active')"></i>
         </div>
         <div class="nav-menu">
             <a href="/" class="nav-link active">🏟️ Matches</a>
@@ -294,39 +316,46 @@ def home():
             </form>
         </div>
         <div class="container">
-            {% for m in matches %}
-            <a href="/match/{{ m.id }}" class="match-card">
-                <div class="league-title">
-                    <span>🏆 {{ m.league }}</span>
-                    <span style="color: #666; font-weight: normal;">{{ m.detail }}</span>
+            {% if error_msg %}
+                <div style="text-align:center; padding: 20px; background: white; border-radius: 10px;">
+                    <p style="color: #c62828;">{{ error_msg }}</p>
+                    <button class="retry-btn" onclick="window.location.reload()">Retry</button>
                 </div>
-                <div class="match-header">
-                    <span class="badge {{ m.status }}">{{ m.status }}</span>
-                    {% if m.start_time %}
-                        <span class="time-text">🕒 {{ m.start_time }}</span>
-                    {% endif %}
-                </div>
-                <div class="teams">
-                    <div class="team">
-                        <img class="logo" src="{{ m.home_logo }}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/5328/5328320.png'">
-                        <span>{{ m.home }}</span>
-                    </div>
-                    <div class="score">{{ m.home_score }} - {{ m.away_score }}</div>
-                    <div class="team away">
-                        <span>{{ m.away }}</span>
-                        <img class="logo" src="{{ m.away_logo }}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/5328/5328320.png'">
-                    </div>
-                </div>
-            </a>
             {% else %}
-            <p style="text-align:center; color: #777; padding: 20px;">No matches found for the selected date.</p>
-            {% endfor %}
+                {% for m in matches %}
+                <a href="/match/{{ m.id }}" class="match-card">
+                    <div class="league-title">
+                        <span>🏆 {{ m.league }}</span>
+                        <span style="color: #666; font-weight: normal;">{{ m.detail }}</span>
+                    </div>
+                    <div class="match-header">
+                        <span class="badge {{ m.status }}">{{ m.status }}</span>
+                        {% if m.start_time %}
+                            <span class="time-text">🕒 {{ m.start_time }}</span>
+                        {% endif %}
+                    </div>
+                    <div class="teams">
+                        <div class="team">
+                            <img class="logo" src="{{ m.home_logo }}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/5328/5328320.png'">
+                            <span>{{ m.home }}</span>
+                        </div>
+                        <div class="score">{{ m.home_score }} - {{ m.away_score }}</div>
+                        <div class="team away">
+                            <span>{{ m.away }}</span>
+                            <img class="logo" src="{{ m.away_logo }}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/5328/5328320.png'">
+                        </div>
+                    </div>
+                </a>
+                {% else %}
+                <p style="text-align:center; color: #777; padding: 20px;">No matches found for the selected date.</p>
+                {% endfor %}
+            {% endif %}
             """ + BANNER_AD_CODE + """
         </div>
         """ + BOTTOM_NAV_HTML + PWA_SCRIPT + """
     </body>
     </html>
-    """, matches=matches, selected_date=selected_date, active_tab='matches')
+    """, matches=matches, selected_date=selected_date, error_msg=error_msg, active_tab='matches')
 
 # 2. FAVOURITES TAB
 @app.route('/favourites')
@@ -351,10 +380,10 @@ def favourites():
         """ + PWA_HEADER + COMMON_STYLE + SOCIAL_BAR_CODE + """
         <style>
             .grid-teams { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 15px; }
-            .team-card { background: white; border-radius: 10px; padding: 15px 8px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.03); position: relative; }
+            .team-card { background: white; border-radius: 10px; padding: 15px 8px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.03); position: relative; cursor: pointer; }
             .team-card img { width: 45px; height: 45px; object-fit: contain; margin-bottom: 8px; }
             .team-card div { font-size: 12px; font-weight: bold; color: #333; }
-            .fav-star { position: absolute; top: 6px; right: 8px; color: #ccc; font-size: 14px; cursor: pointer; }
+            .fav-star { position: absolute; top: 6px; right: 8px; color: #ffca28; font-size: 14px; cursor: pointer; }
         </style>
     </head>
     <body>
@@ -362,14 +391,14 @@ def favourites():
         <div class="top-bar">
             <button class="icon-btn" onclick="toggleMenu()"><i class="fas fa-bars"></i></button>
             <span>⭐ Favourites</span>
-            <i class="fas fa-cog icon-btn"></i>
+            <i class="fas fa-cog icon-btn" onclick="showToast('Settings option coming soon!')"></i>
         </div>
         <div class="container">
             <div style="font-size: 12px; font-weight: bold; color: #666; margin: 10px 0 5px 0; text-transform: uppercase;">Most Wanted Teams</div>
             <div class="grid-teams">
                 {% for team in teams %}
-                <div class="team-card">
-                    <i class="far fa-star fav-star"></i>
+                <div class="team-card" onclick="showToast('Saved {{ team.name }} to favourites!')">
+                    <i class="fas fa-star fav-star"></i>
                     <img src="{{ team.logo }}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/5328/5328320.png'">
                     <div>{{ team.name }}</div>
                 </div>
@@ -404,7 +433,7 @@ def explore():
         <style>
             .search-box { background: white; padding: 10px 15px; border-radius: 8px; display: flex; align-items: center; gap: 10px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.03); }
             .search-box input { border: none; outline: none; width: 100%; font-size: 14px; }
-            .country-item { background: white; padding: 12px 15px; border-radius: 8px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
+            .country-item { background: white; padding: 12px 15px; border-radius: 8px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 3px rgba(0,0,0,0.02); cursor: pointer; }
             .c-flag { font-size: 20px; margin-right: 12px; }
             .c-name { font-size: 14px; font-weight: bold; color: #222; }
             .c-sub { font-size: 11px; color: #777; }
@@ -424,7 +453,7 @@ def explore():
             </div>
             <div style="font-size: 12px; font-weight: bold; color: #666; margin-bottom: 10px;">FEATURED COUNTRIES</div>
             {% for c in countries %}
-            <div class="country-item">
+            <div class="country-item" onclick="showToast('Loading leagues for {{ c.name }}...')">
                 <div style="display: flex; align-items: center;">
                     <span class="c-flag">{{ c.flag }}</span>
                     <div>
@@ -471,7 +500,7 @@ def transfers():
         <div class="top-bar">
             <button class="icon-btn" onclick="toggleMenu()"><i class="fas fa-bars"></i></button>
             <span>🔄 Transfers</span>
-            <i class="fas fa-filter icon-btn"></i>
+            <i class="fas fa-filter icon-btn" onclick="showToast('Filter options coming soon!')"></i>
         </div>
         <div class="container">
             <div style="font-size: 11px; font-weight: bold; color: #888; margin-bottom: 8px;">LATEST TRANSFERS</div>
@@ -516,7 +545,7 @@ def news():
         <title>News - Koki Score</title>
         """ + PWA_HEADER + COMMON_STYLE + SOCIAL_BAR_CODE + """
         <style>
-            .news-card { background: white; border-radius: 10px; overflow: hidden; margin-bottom: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.03); }
+            .news-card { background: white; border-radius: 10px; overflow: hidden; margin-bottom: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.03); cursor: pointer; }
             .news-img { width: 100%; height: 160px; object-fit: cover; }
             .news-body { padding: 12px; }
             .news-title { font-size: 14px; font-weight: bold; color: #111; margin-bottom: 6px; }
@@ -533,7 +562,7 @@ def news():
         </div>
         <div class="container">
             {% for item in news_items %}
-            <div class="news-card">
+            <div class="news-card" onclick="showToast('Opening news article...')">
                 <img src="{{ item.img }}" class="news-img" onerror="this.src='https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=500'">
                 <div class="news-body">
                     <div class="news-title">{{ item.title }}</div>
@@ -558,7 +587,7 @@ def match_details(match_id):
     stats = []
     
     try:
-        res = requests.get(url, timeout=5)
+        res = requests.get(url, timeout=7)
         if res.status_code == 200:
             data = res.json()
             header = data.get('header', {}).get('competitions', [{}])[0]
@@ -680,7 +709,7 @@ def standings():
     
     url = f"https://site.api.espn.com/apis/v2/sports/soccer/{league_code}/standings"
     try:
-        res = requests.get(url, timeout=5)
+        res = requests.get(url, timeout=7)
         if res.status_code == 200:
             data = res.json()
             entries = []
@@ -793,7 +822,7 @@ def topscorers():
     
     try:
         url = f"https://site.api.espn.com/apis/v2/sports/soccer/{league_code}/leaders"
-        res = requests.get(url, timeout=5)
+        res = requests.get(url, timeout=7)
         if res.status_code == 200:
             data = res.json()
             categories = data.get('leaders', [])
