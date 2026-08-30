@@ -814,26 +814,47 @@ def topscorers():
         if res.status_code == 200:
             data = res.json()
             categories = data.get('leaders', [])
-            goals_category = next((c for c in categories if c.get('name') in ['goals', 'scoring'] or 'goal' in c.get('displayName', '').lower()), None)
-            if not goals_category and len(categories) > 0:
-                goals_category = categories[0]
-                
-            if goals_category:
-                leaders = goals_category.get('leaders', [])
-                for idx, leader in enumerate(leaders[:20], start=1):
-                    athlete = leader.get('athlete', {})
-                    name = athlete.get('displayName', athlete.get('fullName', 'Player'))
-                    headshot = athlete.get('headshot', {}).get('href', '') if isinstance(athlete.get('headshot'), dict) else athlete.get('headshot', '')
-                    team = athlete.get('team', {}).get('displayName', '')
-                    goals = leader.get('value', 0)
-                    
-                    scorers_data.append({
-                        "rank": idx,
-                        "name": name,
-                        "team": team,
-                        "headshot": headshot,
-                        "goals": int(goals)
-                    })
+            for cat in categories:
+                cat_name = cat.get('name', '').lower()
+                display_name = cat.get('displayName', '').lower()
+                if 'goal' in cat_name or 'scoring' in cat_name or 'goal' in display_name or 'score' in display_name:
+                    leaders = cat.get('leaders', [])
+                    for idx, leader in enumerate(leaders[:20], start=1):
+                        athlete = leader.get('athlete', {})
+                        name = athlete.get('displayName', athlete.get('fullName', 'Player'))
+                        headshot = athlete.get('headshot', {}).get('href', '') if isinstance(athlete.get('headshot'), dict) else athlete.get('headshot', '')
+                        team = athlete.get('team', {}).get('displayName', '') or athlete.get('team', {}).get('name', '')
+                        goals = leader.get('value', 0)
+                        
+                        scorers_data.append({
+                            "rank": idx,
+                            "name": name,
+                            "team": team,
+                            "headshot": headshot,
+                            "goals": int(goals)
+                        })
+                    break
+            
+            # Fallback if specific category wasn't caught by keyword
+            if not scorers_data and len(categories) > 0:
+                for cat in categories:
+                    leaders = cat.get('leaders', [])
+                    if leaders:
+                        for idx, leader in enumerate(leaders[:20], start=1):
+                            athlete = leader.get('athlete', {})
+                            name = athlete.get('displayName', athlete.get('fullName', 'Player'))
+                            headshot = athlete.get('headshot', {}).get('href', '') if isinstance(athlete.get('headshot'), dict) else athlete.get('headshot', '')
+                            team = athlete.get('team', {}).get('displayName', '') or athlete.get('team', {}).get('name', '')
+                            val = leader.get('value', 0)
+                            
+                            scorers_data.append({
+                                "rank": idx,
+                                "name": name,
+                                "team": team,
+                                "headshot": headshot,
+                                "goals": int(val)
+                            })
+                        break
     except Exception as e:
         print("Top Scorers Error:", e)
 
@@ -890,7 +911,7 @@ def topscorers():
                 {% endfor %}
             {% else %}
                 <div style="text-align:center; padding: 30px; color: #777; background: white; border-radius: 10px;">
-                    No top scorers data currently available for this league.
+                    Top scorers data will appear once the league matches are fully underway.
                 </div>
             {% endif %}
             """ + BANNER_AD_CODE + """
