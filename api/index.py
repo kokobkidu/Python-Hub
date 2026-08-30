@@ -18,11 +18,21 @@ LEAGUES_MAP = {
 }
 
 # ---------------------------------------------------------
-# ADVERTISEMENTS REMOVED FOR HUAWEI COMPLIANCE
+# GOOGLE ADMOB CODES
 # ---------------------------------------------------------
+ADMOB_APP_ID = "ca-app-pub-8381087147853944~8248133014"
+BANNER_AD_UNIT = "ca-app-pub-8381087147853944/4573227831"
+INTERSTITIAL_AD_UNIT = "ca-app-pub-8381087147853944/2709481822"
+
 SOCIAL_BAR_CODE = ""
-INTERSTITIAL_AD_CODE = ""
-BANNER_AD_CODE = ""
+INTERSTITIAL_AD_CODE = f"""
+<!-- AdMob Interstitial ID: {INTERSTITIAL_AD_UNIT} -->
+"""
+BANNER_AD_CODE = f"""
+<div style="text-align:center; margin: 10px 0;">
+    <!-- AdMob Banner ID: {BANNER_AD_UNIT} -->
+</div>
+"""
 # ---------------------------------------------------------
 
 def extract_league_name(event):
@@ -200,7 +210,6 @@ BOTTOM_NAV_HTML = """
 def privacy_policy():
     return "<h2>Privacy Policy</h2><p>Koki Score provides live sports updates. We do not collect or share personal information.</p>"
 
-# 1. MATCHES (HOME)
 @app.route('/')
 def home():
     selected_date = request.args.get('date', datetime.now().strftime('%Y-%m-%d'))
@@ -343,7 +352,6 @@ def home():
     </html>
     """, matches=matches, selected_date=selected_date, error_msg=error_msg, active_tab='matches')
 
-# 2. FAVOURITES TAB
 @app.route('/favourites')
 def favourites():
     popular_teams = [
@@ -397,7 +405,6 @@ def favourites():
     </html>
     """, teams=popular_teams, active_tab='favourites')
 
-# 3. EXPLORE TAB
 @app.route('/explore')
 def explore():
     countries = [
@@ -457,7 +464,6 @@ def explore():
     </html>
     """, countries=countries, active_tab='explore')
 
-# 4. TRANSFERS TAB
 @app.route('/transfers')
 def transfers():
     transfers_data = [
@@ -506,7 +512,6 @@ def transfers():
     </html>
     """, transfers=transfers_data, active_tab='transfers')
 
-# 5. NEWS TAB
 @app.route('/news')
 def news():
     news_items = [
@@ -564,7 +569,6 @@ def news():
     </html>
     """, news_items=news_items, active_tab='news')
 
-# 6. MATCH DETAILS
 @app.route('/match/<match_id>')
 def match_details(match_id):
     url = f"https://site.api.espn.com/apis/site/v2/sports/soccer/all/summary?event={match_id}"
@@ -687,7 +691,6 @@ def match_details(match_id):
     </html>
     """, match=match_data, events=events, stats=stats, active_tab='matches')
 
-# 7. STANDINGS
 @app.route('/standings')
 def standings():
     league_code = request.args.get('league', 'eng.1')
@@ -800,7 +803,6 @@ def standings():
     </html>
     """, standings=standings_data, leagues=LEAGUES_MAP, selected_league=league_code, active_tab='matches')
 
-# 8. TOP SCORERS
 @app.route('/topscorers')
 def topscorers():
     league_code = request.args.get('league', 'eng.1')
@@ -877,7 +879,7 @@ def topscorers():
                             <img src="{{ player.headshot }}" class="player-img" onerror="this.style.display='none'">
                         {% else %}
                             <div class="player-img" style="display:flex;align-items:center;justify-content:center;font-size:18px;">👤</div>
-                        {% icon_img_placeholder %}
+                        {% endif %}
                         <div>
                             <div class="player-name">{{ player.name }}</div>
                             <div class="player-team">{{ player.team }}</div>
